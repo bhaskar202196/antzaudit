@@ -1,26 +1,72 @@
 // src/app/zoos/[zooId]/sites/page.tsx
 "use client";
-import type { Site, Zoo } from '@/lib/types';
+import type { Site, Zoo, Enclosure, Animal } from '@/lib/types';
 import { getZooById } from '@/lib/data';
 import SiteCard from '@/components/zoo/site-card';
-import { use, useEffect, useState } from 'react'; // Added 'use'
+import { use, useEffect, useState, useCallback } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Download } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
+import { useToast } from "@/hooks/use-toast";
 
 interface ZooSitesPageProps {
-  params: Promise<{ zooId: string }>; // Updated type to Promise
+  params: Promise<{ zooId: string }>;
 }
 
+// Helper function to convert full zoo data to CSV format
+const convertZooDataToCSV = (zoo: Zoo): { csv: string; hasData: boolean } => {
+  const headers = [
+    'Zoo ID', 'Zoo Name', 'Zoo City',
+    'Site ID', 'Site Name', 'Site Location',
+    'Enclosure ID', 'Enclosure Name', 'Enclosure Type',
+    'Animal ID', 'Animal Name', 'Animal Species', 'Verified', 'Verified At'
+  ];
+
+  const rows: (string | number | boolean | undefined)[][] = [];
+
+  zoo.sites.forEach(site => {
+    site.enclosures.forEach(enclosure => {
+      enclosure.animals.forEach(animal => {
+        rows.push([
+          zoo.id, zoo.name, zoo.city,
+          site.id, site.name, site.location,
+          enclosure.id, enclosure.name, enclosure.type,
+          animal.id, animal.name, animal.species,
+          animal.verified ? 'Yes' : 'No',
+          animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : ''
+        ]);
+      });
+    });
+  });
+
+  const escapeField = (field: string | number | boolean | undefined) => {
+    if (field === null || field === undefined) return '';
+    const stringField = String(field);
+    if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+      return `"${stringField.replace(/"/g, '""')}"`;
+    }
+    return stringField;
+  };
+
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.map(escapeField).join(','))
+  ].join('\n');
+
+  return { csv: csvContent, hasData: rows.length > 0 };
+};
+
+
 export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProps) {
-  const params = use(paramsPromise); // Unwrap params using React.use()
+  const params = use(paramsPromise);
   const { zooId } = params;
 
-  const [zoo, setZoo] = useState<Zoo | null | undefined>(null); // null for loading, undefined for not found
+  const [zoo, setZoo] = useState<Zoo | null | undefined>(null);
   const { setBreadcrumbs } = useBreadcrumbs();
+  const { toast } = useToast();
 
   useEffect(() => {
     const currentZoo = getZooById(zooId);
@@ -36,9 +82,44 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
     }
   }, [zooId, setBreadcrumbs]);
 
+  const handleExportZooCSV = useCallback(() => {
+    if (!zoo) {
+      toast({ title: "Error", description: "Zoo data not loaded yet.", variant: "destructive" });
+      return;
+    }
+
+    const { csv: csvData, hasData } = convertZooDataToCSV(zoo);
+
+    if (!hasData) {
+      toast({ title: "No Data", description: `No animal data found in ${zoo.name} to export.`, variant: "default", className: "bg-secondary text-secondary-foreground" });
+      // Still proceed to download CSV with headers if user wants an empty template
+    }
+    
+    try {
+      const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${zoo.name.replace(/\s+/g, '_')}_data_export.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast({ title: "Export Successful", description: `All data for ${zoo.name} has been downloaded.` });
+    } catch (error) {
+      console.error("Failed to export Zoo CSV:", error);
+      toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
+    }
+  }, [zoo, toast]);
+
   if (zoo === null) { // Loading state
     return (
       <div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <Skeleton className="h-10 w-36" />
+          <Skeleton className="h-10 w-48" />
+        </div>
         <Skeleton className="h-10 w-1/2 mb-2" />
         <Skeleton className="h-8 w-1/3 mb-8" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -80,11 +161,16 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
 
   return (
     <div className="animate-fadeIn">
-      <Button asChild variant="outline" className="mb-6">
-        <Link href="/dashboard">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Zoos
-        </Link>
-      </Button>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <Button asChild variant="outline">
+          <Link href="/dashboard">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+          </Link>
+        </Button>
+        <Button variant="outline" onClick={handleExportZooCSV}>
+          <Download className="mr-2 h-4 w-4" /> Export All Zoo Data (CSV)
+        </Button>
+      </div>
       <h1 className="text-4xl font-bold mb-2 tracking-tight text-gray-800">{zoo.name}</h1>
       <p className="text-xl text-muted-foreground mb-8">Sites within this Zoo</p>
       
