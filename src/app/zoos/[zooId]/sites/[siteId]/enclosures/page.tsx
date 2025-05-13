@@ -1,3 +1,4 @@
+
 // src/app/zoos/[zooId]/sites/[siteId]/enclosures/page.tsx
 "use client";
 import type { Enclosure, Site, Zoo } from '@/lib/types';
@@ -48,29 +49,31 @@ export default function EnclosureListPage({ params }: EnclosureListPageProps) {
 
   if (zoo === null || site === null) { // Loading state
      return (
-      <div>
-        <Skeleton className="h-10 w-1/2 mb-2" />
-        <Skeleton className="h-8 w-1/3 mb-2" />
-        <Skeleton className="h-6 w-1/4 mb-8" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map(i => (
-            <Card key={i} className="flex flex-col">
-              <Skeleton className="h-48 w-full" />
-              <CardHeader>
-                <Skeleton className="h-7 w-3/4 mb-2" />
-                <Skeleton className="h-5 w-1/2" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full mb-1" />
-                <Skeleton className="h-4 w-5/6" />
-              </CardFooter>
-              <CardFooter>
-                <Skeleton className="h-10 w-full" />
-              </CardFooter>
-            </Card>
-          ))}
+      <>
+        <div>
+          <Skeleton className="h-10 w-1/2 mb-2" />
+          <Skeleton className="h-8 w-1/3 mb-2" />
+          <Skeleton className="h-6 w-1/4 mb-8" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+              <Card key={i} className="flex flex-col">
+                <Skeleton className="h-48 w-full" />
+                <CardHeader>
+                  <Skeleton className="h-7 w-3/4 mb-2" />
+                  <Skeleton className="h-5 w-1/2" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-4 w-full mb-1" />
+                  <Skeleton className="h-4 w-5/6" />
+                </CardContent>
+                <CardFooter>
+                  <Skeleton className="h-10 w-full" />
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
