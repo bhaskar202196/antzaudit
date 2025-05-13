@@ -1,4 +1,4 @@
-import type { Zoo, User } from './types';
+import type { Zoo, User, Section } from './types'; // Added Section to imports
 
 export const MOCK_USERS: User[] = [
   { id: 'user1', email: 'auditor@example.com' },
@@ -15,63 +15,77 @@ export const MOCK_ZOOS: Zoo[] = [
     sites: [
       {
         id: 'siteA',
-        name: 'African Savannah',
-        location: 'North Sector',
+        name: 'African Savannah', // Site/Facility
+        location: 'Main Park Area', // General location for the site
         imageUrl: 'https://picsum.photos/seed/siteA/600/400',
-        enclosures: [
+        sections: [ // Sections within African Savannah site
           {
-            id: 'enc1',
-            name: 'Lion Pride Rock',
-            type: 'Large Mammal Exhibit',
-            imageUrl: 'https://picsum.photos/seed/enc1/600/400',
-            animals: [
-              { 
-                id: 'animal1', name: 'Leo', species: 'Lion', verified: false, 
-                imageUrl: 'https://picsum.photos/seed/animal1/100/100', commonName: 'Lion'
+            id: 'sectionA1',
+            name: 'North Sector', // Section Name
+            imageUrl: 'https://picsum.photos/seed/sectionA1/600/400',
+            enclosures: [
+              {
+                id: 'enc1',
+                name: 'Lion Pride Rock',
+                type: 'Large Mammal Exhibit',
+                imageUrl: 'https://picsum.photos/seed/enc1/600/400',
+                animals: [
+                  { 
+                    id: 'animal1', name: 'Leo', species: 'Lion', verified: false, 
+                    imageUrl: 'https://picsum.photos/seed/animal1/100/100', commonName: 'Lion'
+                  },
+                  { 
+                    id: 'animal2', name: 'Leona', species: 'Lion', verified: true, 
+                    verifiedAt: new Date(Date.now() - 86400000).toISOString(), 
+                    imageUrl: 'https://picsum.photos/seed/animal2/100/100', commonName: 'Lion'
+                  }, 
+                ],
               },
-              { 
-                id: 'animal2', name: 'Leona', species: 'Lion', verified: true, 
-                verifiedAt: new Date(Date.now() - 86400000).toISOString(), 
-                imageUrl: 'https://picsum.photos/seed/animal2/100/100', commonName: 'Lion'
-              }, 
-            ],
-          },
-          {
-            id: 'enc2',
-            name: 'Zebra Plains',
-            type: 'Hoofed Animals Area',
-            imageUrl: 'https://picsum.photos/seed/enc2/600/400',
-            animals: [
-              { 
-                id: 'animal3', name: 'Stripes', species: 'Zebra', verified: false, 
-                imageUrl: 'https://picsum.photos/seed/animal3/100/100', commonName: 'Zebra'
+              {
+                id: 'enc2',
+                name: 'Zebra Plains',
+                type: 'Hoofed Animals Area',
+                imageUrl: 'https://picsum.photos/seed/enc2/600/400',
+                animals: [
+                  { 
+                    id: 'animal3', name: 'Stripes', species: 'Zebra', verified: false, 
+                    imageUrl: 'https://picsum.photos/seed/animal3/100/100', commonName: 'Zebra'
+                  },
+                ],
               },
             ],
-          },
+          }
         ],
       },
       {
         id: 'siteB',
         name: 'Amazon Rainforest Pavilion',
-        location: 'West Sector',
+        location: 'Indoor Exhibits',
         imageUrl: 'https://picsum.photos/seed/siteB/600/400',
-        enclosures: [
+        sections: [
           {
-            id: 'enc3',
-            name: 'Monkey Jungle',
-            type: 'Primate Habitat',
-            imageUrl: 'https://picsum.photos/seed/enc3/600/400',
-            animals: [
-              { 
-                id: 'animal4', name: 'Miko', species: 'Capuchin Monkey', verified: false, 
-                imageUrl: 'https://picsum.photos/seed/animal4/100/100', commonName: 'Capuchin Monkey'
-              },
-              { 
-                id: 'animal5', name: 'Momo', species: 'Capuchin Monkey', verified: false, 
-                imageUrl: 'https://picsum.photos/seed/animal5/100/100', commonName: 'Capuchin Monkey'
+            id: 'sectionB1',
+            name: 'West Sector', // Section Name
+            imageUrl: 'https://picsum.photos/seed/sectionB1/600/400',
+            enclosures: [
+              {
+                id: 'enc3',
+                name: 'Monkey Jungle',
+                type: 'Primate Habitat',
+                imageUrl: 'https://picsum.photos/seed/enc3/600/400',
+                animals: [
+                  { 
+                    id: 'animal4', name: 'Miko', species: 'Capuchin Monkey', verified: false, 
+                    imageUrl: 'https://picsum.photos/seed/animal4/100/100', commonName: 'Capuchin Monkey'
+                  },
+                  { 
+                    id: 'animal5', name: 'Momo', species: 'Capuchin Monkey', verified: false, 
+                    imageUrl: 'https://picsum.photos/seed/animal5/100/100', commonName: 'Capuchin Monkey'
+                  },
+                ],
               },
             ],
-          },
+          }
         ],
       },
     ],
@@ -85,23 +99,30 @@ export const MOCK_ZOOS: Zoo[] = [
     sites: [
       {
         id: 'siteC',
-        name: 'Arctic Tundra',
-        location: 'Polar Zone',
+        name: 'Arctic Tundra', // Site/Facility
+        location: 'Cold Climate Zone',
         imageUrl: 'https://picsum.photos/seed/siteC/600/400',
-        enclosures: [
+        sections: [
           {
-            id: 'enc4',
-            name: 'Polar Bear Ice Caps',
-            type: 'Arctic Exhibit',
-            imageUrl: 'https://picsum.photos/seed/enc4/600/400',
-            animals: [
-              { 
-                id: 'animal6', name: 'Snowy', species: 'Polar Bear', verified: true, 
-                verifiedAt: new Date(Date.now() - 2*86400000).toISOString(), 
-                imageUrl: 'https://picsum.photos/seed/animal6/100/100', commonName: 'Polar Bear'
+            id: 'sectionC1',
+            name: 'Polar Zone', // Section Name
+            imageUrl: 'https://picsum.photos/seed/sectionC1/600/400',
+            enclosures: [
+              {
+                id: 'enc4',
+                name: 'Polar Bear Ice Caps',
+                type: 'Arctic Exhibit',
+                imageUrl: 'https://picsum.photos/seed/enc4/600/400',
+                animals: [
+                  { 
+                    id: 'animal6', name: 'Snowy', species: 'Polar Bear', verified: true, 
+                    verifiedAt: new Date(Date.now() - 2*86400000).toISOString(), 
+                    imageUrl: 'https://picsum.photos/seed/animal6/100/100', commonName: 'Polar Bear'
+                  },
+                ],
               },
             ],
-          },
+          }
         ],
       },
     ],

@@ -1,10 +1,10 @@
-// src/app/zoos/[zooId]/sites/[siteId]/enclosures/[enclosureId]/animals/page.tsx
+// src/app/zoos/[zooId]/sites/[siteId]/sections/[sectionId]/enclosures/[enclosureId]/animals/page.tsx
 "use client";
-import type { Animal, Enclosure, Site, Zoo } from '@/lib/types';
+import type { Animal, Enclosure, Section, Site, Zoo } from '@/lib/types'; // Added Section
 import AnimalListItem from '@/components/zoo/animal-list-item';
 import { use, useEffect, useState, useCallback } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
-import { useZooData } from '@/contexts/zoo-data-context'; // Import useZooData
+import { useZooData } from '@/contexts/zoo-data-context'; 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertTriangle, Download } from 'lucide-react';
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface AnimalVerificationPageProps {
-  params: Promise<{ zooId: string; siteId: string; enclosureId: string }>;
+  params: Promise<{ zooId: string; siteId: string; sectionId: string; enclosureId: string }>; // Added sectionId
 }
 
 // Helper function to convert animal data to CSV format
@@ -50,10 +50,11 @@ const convertAnimalsToCSV = (animals: Animal[], enclosureName: string): string =
 
 export default function AnimalVerificationPage({ params: paramsPromise }: AnimalVerificationPageProps) {
   const params = use(paramsPromise);
-  const { zooId, siteId, enclosureId } = params;
+  const { zooId, siteId, sectionId, enclosureId } = params; // Added sectionId
 
   const { 
     getEnclosureById: getEnclosureByIdFromContext, 
+    getSectionById: getSectionByIdFromContext, // Added getSectionById
     getSiteById: getSiteByIdFromContext,
     getZooById: getZooByIdFromContext,
     updateAnimalVerification, 
@@ -62,8 +63,8 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
 
   const [zoo, setZoo] = useState<Zoo | null | undefined>(null);
   const [site, setSite] = useState<Site | null | undefined>(null);
+  const [section, setSection] = useState<Section | null | undefined>(null); // Added section state
   const [enclosure, setEnclosure] = useState<Enclosure | null | undefined>(null);
-  // Animals state will be derived from enclosure, no separate state needed for the list itself
   
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
@@ -75,22 +76,35 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
       const currentSite = getSiteByIdFromContext(zooId, siteId);
       setSite(currentSite);
       if (currentSite) {
-        const currentEnclosure = getEnclosureByIdFromContext(zooId, siteId, enclosureId);
-        setEnclosure(currentEnclosure);
-        if (currentEnclosure) {
-          const breadcrumbsData: BreadcrumbItem[] = [
-            { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
-            { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/enclosures` },
-            { label: currentEnclosure.name, href: `/zoos/${zooId}/sites/${siteId}/enclosures/${enclosureId}/animals` },
-          ];
-          setBreadcrumbs(breadcrumbsData);
+        const currentSection = getSectionByIdFromContext(zooId, siteId, sectionId); // Fetch section
+        setSection(currentSection);
+        if (currentSection) {
+          const currentEnclosure = getEnclosureByIdFromContext(zooId, siteId, sectionId, enclosureId); // Use sectionId
+          setEnclosure(currentEnclosure);
+          if (currentEnclosure) {
+            const breadcrumbsData: BreadcrumbItem[] = [
+              { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
+              { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/sections` },
+              { label: currentSection.name, href: `/zoos/${zooId}/sites/${siteId}/sections/${sectionId}/enclosures` },
+              { label: currentEnclosure.name, href: `/zoos/${zooId}/sites/${siteId}/sections/${sectionId}/enclosures/${enclosureId}/animals` },
+            ];
+            setBreadcrumbs(breadcrumbsData);
+          } else if (!isZooDataLoading) {
+            setEnclosure(undefined);
+            setBreadcrumbs([ 
+              { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
+              { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/sections` },
+              { label: currentSection.name, href: `/zoos/${zooId}/sites/${siteId}/sections/${sectionId}/enclosures` },
+              { label: "Enclosure Not Found", href: `/zoos/${zooId}/sites/${siteId}/sections/${sectionId}/enclosures` }
+            ]);
+          }
         } else if (!isZooDataLoading) {
-          setEnclosure(undefined);
-          setBreadcrumbs([
-            { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
-            { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/enclosures` },
-            { label: "Enclosure Not Found", href: `/zoos/${zooId}/sites/${siteId}/enclosures` }
-          ]);
+            setSection(undefined);
+            setBreadcrumbs([ 
+                { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
+                { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/sections` },
+                { label: "Section Not Found", href: `/zoos/${zooId}/sites/${siteId}/sections` }
+            ]);
         }
       } else if (!isZooDataLoading) {
         setSite(undefined);
@@ -103,7 +117,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
       setZoo(undefined);
       setBreadcrumbs([{label: "Zoo Not Found", href: "/dashboard"}]);
     }
-  }, [zooId, siteId, enclosureId, getZooByIdFromContext, getSiteByIdFromContext, getEnclosureByIdFromContext, setBreadcrumbs, isZooDataLoading]);
+  }, [zooId, siteId, sectionId, enclosureId, getZooByIdFromContext, getSiteByIdFromContext, getSectionByIdFromContext, getEnclosureByIdFromContext, setBreadcrumbs, isZooDataLoading]);
 
   const handleToggleVerify = useCallback((animalId: string) => {
     if (!enclosure) return;
@@ -114,11 +128,10 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
     const isNowVerified = !animalToUpdate.verified;
     const newVerifiedAt = isNowVerified ? new Date().toISOString() : undefined;
     
-    updateAnimalVerification(zooId, siteId, enclosureId, animalId, isNowVerified, newVerifiedAt);
+    updateAnimalVerification(zooId, siteId, sectionId, enclosureId, animalId, isNowVerified, newVerifiedAt);
 
-    // Toast needs to be triggered after state update has likely propagated
     setTimeout(() => {
-        const currentAnimal = getEnclosureByIdFromContext(zooId, siteId, enclosureId)?.animals.find(a => a.id === animalId);
+        const currentAnimal = getEnclosureByIdFromContext(zooId, siteId, sectionId, enclosureId)?.animals.find(a => a.id === animalId);
         if (currentAnimal) {
             let toastTitle = `Animal ${currentAnimal.verified ? 'Verified' : 'Unverified'}`;
             let toastDescription = `${currentAnimal.name} (${currentAnimal.species}) status updated.`;
@@ -134,7 +147,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
         }
     }, 0);
 
-  }, [enclosure, zooId, siteId, enclosureId, updateAnimalVerification, toast, getEnclosureByIdFromContext]);
+  }, [enclosure, zooId, siteId, sectionId, enclosureId, updateAnimalVerification, toast, getEnclosureByIdFromContext]);
 
   const handleExportCSV = useCallback(() => {
     if (!enclosure || !enclosure.animals || enclosure.animals.length === 0) {
@@ -166,10 +179,10 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
     }
   }, [enclosure, toast]);
   
-  if (isZooDataLoading || zoo === null || (zoo && site === null) || (zoo && site && enclosure === null) ) { 
+  if (isZooDataLoading || zoo === null || (zoo && site === null) || (zoo && site && section === null) || (zoo && site && section && enclosure === null) ) { 
     return (
       <div>
-        <Skeleton className="h-10 w-36 mb-6" /> {/* Back button skeleton */}
+        <Skeleton className="h-10 w-64 mb-6" /> {/* Back button skeleton */}
         <Skeleton className="h-10 w-3/4 mb-2" /> {/* Title skeleton */}
         <Skeleton className="h-8 w-1/2 mb-2" /> {/* Subtitle skeleton */}
         <Skeleton className="h-6 w-1/3 mb-2" />
@@ -183,14 +196,14 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
     );
   }
 
-  if (zoo === undefined || site === undefined || enclosure === undefined) { 
+  if (zoo === undefined || site === undefined || section === undefined || enclosure === undefined) { 
      return (
       <div className="flex flex-col items-center justify-center text-center py-10">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
         <h1 className="text-3xl font-bold mb-2">Content Not Found</h1>
-        <p className="text-muted-foreground mb-6">The requested zoo, site, or enclosure could not be found.</p>
+        <p className="text-muted-foreground mb-6">The requested zoo, site, section, or enclosure could not be found.</p>
         <Button asChild>
-          <Link href={site ? `/zoos/${zooId}/sites/${siteId}/enclosures` : (zoo ? `/zoos/${zooId}/sites` : "/dashboard")}>
+          <Link href={section ? `/zoos/${zooId}/sites/${siteId}/sections/${sectionId}/enclosures` : (site ? `/zoos/${zooId}/sites/${siteId}/sections` : (zoo ? `/zoos/${zooId}/sites` : "/dashboard"))}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
           </Link>
         </Button>
@@ -198,14 +211,14 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
     );
   }
 
-  const animals = enclosure.animals; // Get animals from the current enclosure state
+  const animals = enclosure.animals; 
 
   return (
     <div className="animate-fadeIn">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <Button asChild variant="outline">
-          <Link href={`/zoos/${zooId}/sites/${siteId}/enclosures`}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Enclosures in {site.name}
+          <Link href={`/zoos/${zooId}/sites/${siteId}/sections/${sectionId}/enclosures`}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Enclosures in {section.name}
           </Link>
         </Button>
         {animals.length > 0 && (
@@ -216,7 +229,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
       </div>
 
       <h1 className="text-4xl font-bold mb-2 tracking-tight text-gray-800">{enclosure.name}</h1>
-      <p className="text-xl text-muted-foreground mb-8">Animals for Verification</p>
+      <p className="text-xl text-muted-foreground mb-8">Animals for Verification (in {section.name})</p>
       
       {animals.length === 0 ? (
         <p className="text-lg text-muted-foreground">This enclosure has no animals listed for verification.</p>

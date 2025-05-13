@@ -1,10 +1,10 @@
 // src/app/zoos/[zooId]/sites/page.tsx
 "use client";
-import type { Site, Zoo } from '@/lib/types'; // Removed Enclosure, Animal as they are not directly used here
+import type { Site, Zoo } from '@/lib/types'; 
 import SiteCard from '@/components/zoo/site-card';
 import { use, useEffect, useState, useCallback } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
-import { useZooData } from '@/contexts/zoo-data-context'; // Import useZooData
+import { useZooData } from '@/contexts/zoo-data-context'; 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertTriangle, Download } from 'lucide-react';
@@ -21,6 +21,7 @@ const convertZooDataToCSV = (zoo: Zoo): { csv: string; hasData: boolean } => {
   const headers = [
     'Zoo ID', 'Zoo Name', 'Zoo City',
     'Site ID', 'Site Name', 'Site Location',
+    'Section ID', 'Section Name', // Added Section ID and Name
     'Enclosure ID', 'Enclosure Name', 'Enclosure Type',
     'Animal ID', 'Animal Name', 'Animal Species', 'Common Name', 'Gender', 'Verified', 'Verified At',
     'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue',
@@ -31,19 +32,22 @@ const convertZooDataToCSV = (zoo: Zoo): { csv: string; hasData: boolean } => {
   const rows: (string | number | boolean | undefined)[][] = [];
 
   zoo.sites.forEach(site => {
-    site.enclosures.forEach(enclosure => {
-      enclosure.animals.forEach(animal => {
-        rows.push([
-          zoo.id, zoo.name, zoo.city,
-          site.id, site.name, site.location,
-          enclosure.id, enclosure.name, enclosure.type,
-          animal.id, animal.name, animal.species, animal.commonName, animal.gender,
-          animal.verified ? 'Yes' : 'No',
-          animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : '',
-          animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
-          animal.breedName, animal.morphName, animal.weight, animal.age,
-          animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber
-        ]);
+    site.sections.forEach(section => { // Iterate through sections
+      section.enclosures.forEach(enclosure => {
+        enclosure.animals.forEach(animal => {
+          rows.push([
+            zoo.id, zoo.name, zoo.city,
+            site.id, site.name, site.location,
+            section.id, section.name, // Add section data
+            enclosure.id, enclosure.name, enclosure.type,
+            animal.id, animal.name, animal.species, animal.commonName, animal.gender,
+            animal.verified ? 'Yes' : 'No',
+            animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : '',
+            animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
+            animal.breedName, animal.morphName, animal.weight, animal.age,
+            animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber
+          ]);
+        });
       });
     });
   });
@@ -70,8 +74,8 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
   const params = use(paramsPromise);
   const { zooId } = params;
 
-  const { getZooById: getZooByIdFromContext, isLoading: isZooDataLoading } = useZooData(); // Use context
-  const [zoo, setZoo] = useState<Zoo | null | undefined>(null); // null for loading, undefined for not found
+  const { getZooById: getZooByIdFromContext, isLoading: isZooDataLoading } = useZooData(); 
+  const [zoo, setZoo] = useState<Zoo | null | undefined>(null); 
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
 
@@ -84,11 +88,10 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
         { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
       ];
       setBreadcrumbs(breadcrumbsData);
-    } else if (!isZooDataLoading) { // Only set not found if not loading
-      setZoo(undefined); // Explicitly set to undefined if not found and not loading
+    } else if (!isZooDataLoading) { 
+      setZoo(undefined); 
       setBreadcrumbs([{ label: "Zoo Not Found", href: `/dashboard` }]);
     }
-    // If isZooDataLoading, zoo will be null, and loading skeleton will show.
   }, [zooId, getZooByIdFromContext, setBreadcrumbs, isZooDataLoading]);
 
   const handleExportZooCSV = useCallback(() => {
@@ -105,7 +108,6 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       setTimeout(() => {
       toast({ title: "No Data", description: `No animal data found in ${zoo.name} to export.`, variant: "default", className: "bg-secondary text-secondary-foreground" });
       },0);
-      // Still proceed to download CSV with headers if user wants an empty template
     }
     
     try {
@@ -130,7 +132,7 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
     }
   }, [zoo, toast]);
 
-  if (isZooDataLoading || zoo === null) { // Loading state
+  if (isZooDataLoading || zoo === null) { 
     return (
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -161,7 +163,7 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
     );
   }
 
-  if (zoo === undefined) { // Not found state
+  if (zoo === undefined) { 
     return (
       <div className="flex flex-col items-center justify-center text-center py-10">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />

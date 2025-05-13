@@ -4,15 +4,16 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fence, Home, Eye, Tag } from 'lucide-react'; // Using Home as a fallback if Fence isn't fitting
+import { Fence, Home, Eye, Tag } from 'lucide-react'; 
 
 interface EnclosureCardProps {
   enclosure: Enclosure;
   zooId: string;
   siteId: string;
+  sectionId: string; // Add sectionId
 }
 
-export default function EnclosureCard({ enclosure, zooId, siteId }: EnclosureCardProps) {
+export default function EnclosureCard({ enclosure, zooId, siteId, sectionId }: EnclosureCardProps) {
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
       {enclosure.imageUrl && (
@@ -43,7 +44,7 @@ export default function EnclosureCard({ enclosure, zooId, siteId }: EnclosureCar
       </CardContent>
       <CardFooter>
         <Button asChild className="w-full">
-          <Link href={`/zoos/${zooId}/sites/${siteId}/enclosures/${enclosure.id}/animals`}>
+          <Link href={`/zoos/${zooId}/sites/${siteId}/sections/${sectionId}/enclosures/${enclosure.id}/animals`}>
             <Eye className="mr-2 h-5 w-5" />
             View Animals
           </Link>

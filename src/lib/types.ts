@@ -39,11 +39,19 @@ export interface Enclosure {
   imageUrl?: string; // Optional image for the enclosure
 }
 
+// New Section interface
+export interface Section {
+  id: string;
+  name: string; // Corresponds to 'Section Name' from CSV
+  enclosures: Enclosure[];
+  imageUrl?: string; // Optional image for the section
+}
+
 export interface Site {
   id: string;
-  name: string;
-  location: string; // e.g., 'North Sector', 'Tropical Zone'
-  enclosures: Enclosure[];
+  name: string; // Corresponds to 'Site/Facility' from CSV
+  location: string; // General location for the site, can be derived or static
+  sections: Section[]; // Changed from enclosures: Enclosure[]
   imageUrl?: string; // Optional image for the site
 }
 

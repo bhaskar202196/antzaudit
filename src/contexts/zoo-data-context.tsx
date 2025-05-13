@@ -2,7 +2,7 @@
 "use client";
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useCallback } from 'react';
-import type { Zoo, Site, Enclosure, Animal, User } from '@/lib/types';
+import type { Zoo, Site, Section, Enclosure, Animal, User } from '@/lib/types'; // Added Section
 import { MOCK_ZOOS as INITIAL_MOCK_ZOOS } from '@/lib/data';
 import Papa from 'papaparse';
 import { generateCsvEntityId } from '@/lib/utils';
@@ -20,7 +20,7 @@ interface CsvRow {
   'Type Of Animal': string; // e.g. "group", "single" from sample
   'Animal Count': string;
   'Site/Facilty': string; // Site Name
-  'Section Name': string; // Site Location
+  'Section Name': string; // Section Name - NEW HIERARCHY LEVEL
   'Enclosure Name': string;
   'Organization Name': string; // Zoo Name
   'Breed Name'?: string;
@@ -39,8 +39,9 @@ interface ZooDataContextType {
   createZoo: (details: { name: string, city: string }, csvString: string | null, currentUser: User) => Promise<{ success: boolean; newZooId?: string; error?: string }>;
   getZooById: (zooId: string) => Zoo | undefined;
   getSiteById: (zooId: string, siteId: string) => Site | undefined;
-  getEnclosureById: (zooId: string, siteId: string, enclosureId: string) => Enclosure | undefined;
-  updateAnimalVerification: (zooId: string, siteId: string, enclosureId: string, animalId: string, verified: boolean, verifiedAt?: string) => void;
+  getSectionById: (zooId: string, siteId: string, sectionId: string) => Section | undefined; // NEW
+  getEnclosureById: (zooId: string, siteId: string, sectionId: string, enclosureId: string) => Enclosure | undefined; // MODIFIED
+  updateAnimalVerification: (zooId: string, siteId: string, sectionId: string, enclosureId: string, animalId: string, verified: boolean, verifiedAt?: string) => void; // MODIFIED
   isLoading: boolean;
 }
 
@@ -85,11 +86,28 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
         site = {
           id: siteId,
           name: siteName,
-          location: row['Section Name'] || 'N/A (from CSV)',
-          enclosures: [],
+          location: 'N/A (from CSV Site)', // Site's general location or default
+          sections: [], // Initialize sections array
           imageUrl: `https://picsum.photos/seed/${siteId}/600/400`
         };
         zooToPopulate.sites.push(site);
+      }
+
+      const sectionName = row['Section Name'];
+      if (!sectionName) {
+        console.warn(`Skipping row ${index + 2} for animal ${animalIdFromCsv} due to missing Section Name.`);
+        return;
+      }
+      let section = site.sections.find(sec => sec.name === sectionName);
+      if (!section) {
+        const sectionId = generateCsvEntityId(sectionName, 'section', site.id);
+        section = {
+          id: sectionId,
+          name: sectionName,
+          enclosures: [],
+          imageUrl: `https://picsum.photos/seed/${sectionId}/600/400`
+        };
+        site.sections.push(section);
       }
 
       const enclosureName = row['Enclosure Name'];
@@ -97,9 +115,9 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
          console.warn(`Skipping row ${index + 2} for animal ${animalIdFromCsv} due to missing Enclosure Name.`);
         return;
       }
-      let enclosure = site.enclosures.find(e => e.name === enclosureName);
+      let enclosure = section.enclosures.find(e => e.name === enclosureName);
       if (!enclosure) {
-        const enclosureId = generateCsvEntityId(enclosureName, 'enc', site.id);
+        const enclosureId = generateCsvEntityId(enclosureName, 'enc', section.id); // Parent is now section.id
         enclosure = {
           id: enclosureId,
           name: enclosureName,
@@ -107,7 +125,7 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
           animals: [],
           imageUrl: `https://picsum.photos/seed/${enclosureId}/600/400`
         };
-        site.enclosures.push(enclosure);
+        section.enclosures.push(enclosure);
       }
       
       const animalBase: Omit<Animal, 'id' | 'name'> = {
@@ -249,7 +267,7 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
               name: details.name,
               city: details.city,
               userId: currentUser.id,
-              sites: [],
+              sites: [], // Initialize with empty sites array
               imageUrl: `https://picsum.photos/seed/${newZooId}/600/400`,
             };
           }
@@ -277,12 +295,17 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
     return zoo?.sites.find(site => site.id === siteId);
   }, [getZooById]);
 
-  const getEnclosureById = useCallback((zooId: string, siteId: string, enclosureId: string): Enclosure | undefined => {
+  const getSectionById = useCallback((zooId: string, siteId: string, sectionId: string): Section | undefined => { // NEW
     const site = getSiteById(zooId, siteId);
-    return site?.enclosures.find(enclosure => enclosure.id === enclosureId);
+    return site?.sections.find(section => section.id === sectionId);
   }, [getSiteById]);
 
-  const updateAnimalVerification = useCallback((zooId: string, siteId: string, enclosureId: string, animalId: string, verified: boolean, verifiedAt?: string) => {
+  const getEnclosureById = useCallback((zooId: string, siteId: string, sectionId: string, enclosureId: string): Enclosure | undefined => { // MODIFIED
+    const section = getSectionById(zooId, siteId, sectionId);
+    return section?.enclosures.find(enclosure => enclosure.id === enclosureId);
+  }, [getSectionById]);
+
+  const updateAnimalVerification = useCallback((zooId: string, siteId: string, sectionId: string, enclosureId: string, animalId: string, verified: boolean, verifiedAt?: string) => { // MODIFIED
     setZoos(prevZoos => {
       return prevZoos.map(zoo => {
         if (zoo.id === zooId) {
@@ -292,19 +315,27 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
               if (site.id === siteId) {
                 return {
                   ...site,
-                  enclosures: site.enclosures.map(enclosure => {
-                    if (enclosure.id === enclosureId) {
+                  sections: site.sections.map(currentSection => { // Iterate through sections
+                    if (currentSection.id === sectionId) {
                       return {
-                        ...enclosure,
-                        animals: enclosure.animals.map(animal => {
-                          if (animal.id === animalId) {
-                            return { ...animal, verified, verifiedAt };
+                        ...currentSection,
+                        enclosures: currentSection.enclosures.map(enclosure => {
+                          if (enclosure.id === enclosureId) {
+                            return {
+                              ...enclosure,
+                              animals: enclosure.animals.map(animal => {
+                                if (animal.id === animalId) {
+                                  return { ...animal, verified, verifiedAt };
+                                }
+                                return animal;
+                              })
+                            };
                           }
-                          return animal;
+                          return enclosure;
                         })
                       };
                     }
-                    return enclosure;
+                    return currentSection;
                   })
                 };
               }
@@ -323,6 +354,7 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
     createZoo,
     getZooById, 
     getSiteById, 
+    getSectionById, // Add new getter
     getEnclosureById, 
     updateAnimalVerification, 
     isLoading 
