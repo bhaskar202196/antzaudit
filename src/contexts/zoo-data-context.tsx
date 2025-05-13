@@ -149,22 +149,37 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
         csvRowNumber: index + 2,
       };
 
-      const animalCount = parseInt(row['Animal Count'], 10);
-      if (isNaN(animalCount) || animalCount < 1) {
-        const animal: Animal = {
-          ...animalBase,
-          id: generateCsvEntityId(animalIdFromCsv, 'animal', enclosure.id), // Ensure unique ID within enclosure
-          name: `${row['Common Name'] || 'Animal'} (${animalIdFromCsv})`,
-        };
-        enclosure.animals.push(animal);
+      const animalCountStr = row['Animal Count']?.trim();
+      let numAnimalsToCreate = 1; // Default to 1 if Animal Count is missing, empty, or invalid
+
+      if (animalCountStr && animalCountStr !== "") {
+        const parsedCount = parseInt(animalCountStr, 10);
+        if (!isNaN(parsedCount)) {
+          if (parsedCount === 0) {
+            numAnimalsToCreate = 0;
+          } else if (parsedCount > 0) {
+            numAnimalsToCreate = parsedCount;
+          }
+          // If parsedCount is &lt; 0, it will fall through and numAnimalsToCreate remains 1 (default).
+        }
+        // If parsing fails (e.g., "text"), numAnimalsToCreate remains 1 (default).
+      }
+      // If animalCountStr is undefined or empty, numAnimalsToCreate remains 1 (default).
+
+      if (numAnimalsToCreate === 0) {
+        console.log(`Animal Count is 0 for Antz Animal Id ${animalIdFromCsv} (CSV Row ${index + 2}). No animals created for this entry.`);
       } else {
-        for (let i = 0; i < animalCount; i++) {
-          const uniqueInstanceSuffix = animalCount > 1 ? `-instance-${i + 1}` : '';
-          const animalInstanceId = generateCsvEntityId(`${animalIdFromCsv}${uniqueInstanceSuffix}`, 'animal', enclosure.id, i);
+        for (let i = 0; i < numAnimalsToCreate; i++) {
+          // Suffix is only added if we are creating more than one animal from THIS specific CSV row.
+          const uniqueInstanceSuffix = numAnimalsToCreate > 1 ? `-instance-${i + 1}` : '';
+          const idNamePart = `${animalIdFromCsv}${uniqueInstanceSuffix}`;
+          
+          const animalInstanceId = generateCsvEntityId(idNamePart, 'animal', enclosure.id, i);
+          
           const animalInstance: Animal = {
             ...animalBase,
             id: animalInstanceId,
-            name: `${row['Common Name'] || 'Animal'} (${animalIdFromCsv}${uniqueInstanceSuffix})`,
+            name: `${row['Common Name'] || 'Animal'} (${idNamePart})`, // Name also reflects instance
           };
           enclosure.animals.push(animalInstance);
         }
