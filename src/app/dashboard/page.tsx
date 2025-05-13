@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useEffect, useState } from 'react';
 import { useBreadcrumbs } from '@/contexts/breadcrumb-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -22,6 +23,10 @@ export default function DashboardPage() {
     if (user) {
       const userZoos = getZoosByUserId(user.id);
       setZoos(userZoos);
+      setLoading(false);
+    } else {
+      // If no user, set loading to false to prevent infinite loading state
+      // Auth checks and middleware should handle redirection
       setLoading(false);
     }
   }, [user]);
@@ -54,7 +59,8 @@ export default function DashboardPage() {
   
   if (!user) {
     // This should ideally not be reached due to auth checks and middleware
-    return <p>Please log in to view your zoos.</p>;
+    // but can be shown briefly if there's a delay in redirection or if auth state is invalid.
+    return <p>Please log in to view your zoos. Redirecting...</p>;
   }
 
   return (
