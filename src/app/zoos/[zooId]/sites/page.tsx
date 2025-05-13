@@ -1,10 +1,10 @@
 // src/app/zoos/[zooId]/sites/page.tsx
 "use client";
-import type { Site, Zoo, Enclosure, Animal } from '@/lib/types';
-import { getZooById } from '@/lib/data';
+import type { Site, Zoo } from '@/lib/types'; // Removed Enclosure, Animal as they are not directly used here
 import SiteCard from '@/components/zoo/site-card';
 import { use, useEffect, useState, useCallback } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
+import { useZooData } from '@/contexts/zoo-data-context'; // Import useZooData
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertTriangle, Download } from 'lucide-react';
@@ -22,7 +22,10 @@ const convertZooDataToCSV = (zoo: Zoo): { csv: string; hasData: boolean } => {
     'Zoo ID', 'Zoo Name', 'Zoo City',
     'Site ID', 'Site Name', 'Site Location',
     'Enclosure ID', 'Enclosure Name', 'Enclosure Type',
-    'Animal ID', 'Animal Name', 'Animal Species', 'Verified', 'Verified At'
+    'Animal ID', 'Animal Name', 'Animal Species', 'Common Name', 'Gender', 'Verified', 'Verified At',
+    'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue',
+    'BreedName', 'MorphName', 'Weight', 'Age',
+    'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row'
   ];
 
   const rows: (string | number | boolean | undefined)[][] = [];
@@ -34,15 +37,18 @@ const convertZooDataToCSV = (zoo: Zoo): { csv: string; hasData: boolean } => {
           zoo.id, zoo.name, zoo.city,
           site.id, site.name, site.location,
           enclosure.id, enclosure.name, enclosure.type,
-          animal.id, animal.name, animal.species,
+          animal.id, animal.name, animal.species, animal.commonName, animal.gender,
           animal.verified ? 'Yes' : 'No',
-          animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : ''
+          animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : '',
+          animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
+          animal.breedName, animal.morphName, animal.weight, animal.age,
+          animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber
         ]);
       });
     });
   });
 
-  const escapeField = (field: string | number | boolean | undefined) => {
+  const escapeField = (field: string | number | boolean | undefined | null) => {
     if (field === null || field === undefined) return '';
     const stringField = String(field);
     if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
@@ -64,12 +70,13 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
   const params = use(paramsPromise);
   const { zooId } = params;
 
-  const [zoo, setZoo] = useState<Zoo | null | undefined>(null);
+  const { getZooById: getZooByIdFromContext, isLoading: isZooDataLoading } = useZooData(); // Use context
+  const [zoo, setZoo] = useState<Zoo | null | undefined>(null); // null for loading, undefined for not found
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
 
   useEffect(() => {
-    const currentZoo = getZooById(zooId);
+    const currentZoo = getZooByIdFromContext(zooId);
     setZoo(currentZoo);
 
     if (currentZoo) {
@@ -77,16 +84,18 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
         { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
       ];
       setBreadcrumbs(breadcrumbsData);
-    } else {
+    } else if (!isZooDataLoading) { // Only set not found if not loading
+      setZoo(undefined); // Explicitly set to undefined if not found and not loading
       setBreadcrumbs([{ label: "Zoo Not Found", href: `/dashboard` }]);
     }
-  }, [zooId, setBreadcrumbs]);
+    // If isZooDataLoading, zoo will be null, and loading skeleton will show.
+  }, [zooId, getZooByIdFromContext, setBreadcrumbs, isZooDataLoading]);
 
   const handleExportZooCSV = useCallback(() => {
     if (!zoo) {
       setTimeout(() => {
-        toast({ title: "Error", description: "Zoo data not loaded yet.", variant: "destructive" });
-      }, 0);
+        toast({ title: "Error", description: "Zoo data not loaded yet or not found.", variant: "destructive" });
+      },0);
       return;
     }
 
@@ -94,8 +103,8 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
 
     if (!hasData) {
       setTimeout(() => {
-        toast({ title: "No Data", description: `No animal data found in ${zoo.name} to export.`, variant: "default", className: "bg-secondary text-secondary-foreground" });
-      }, 0);
+      toast({ title: "No Data", description: `No animal data found in ${zoo.name} to export.`, variant: "default", className: "bg-secondary text-secondary-foreground" });
+      },0);
       // Still proceed to download CSV with headers if user wants an empty template
     }
     
@@ -111,17 +120,17 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       setTimeout(() => {
-        toast({ title: "Export Successful", description: `All data for ${zoo.name} has been downloaded.` });
-      }, 0);
+      toast({ title: "Export Successful", description: `All data for ${zoo.name} has been downloaded.` });
+      },0);
     } catch (error) {
       console.error("Failed to export Zoo CSV:", error);
       setTimeout(() => {
-        toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
-      }, 0);
+      toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
+      },0);
     }
   }, [zoo, toast]);
 
-  if (zoo === null) { // Loading state
+  if (isZooDataLoading || zoo === null) { // Loading state
     return (
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">

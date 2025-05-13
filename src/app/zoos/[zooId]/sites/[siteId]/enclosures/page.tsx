@@ -1,11 +1,11 @@
 
 // src/app/zoos/[zooId]/sites/[siteId]/enclosures/page.tsx
 "use client";
-import type { Enclosure, Site, Zoo } from '@/lib/types';
-import { getZooById, getSiteById } from '@/lib/data';
+import type { Site, Zoo } from '@/lib/types'; // Enclosure is part of Site
 import EnclosureCard from '@/components/zoo/enclosure-card';
-import { use, useEffect, useState } from 'react'; // Added 'use'
+import { use, useEffect, useState } from 'react'; 
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
+import { useZooData } from '@/contexts/zoo-data-context'; // Import useZooData
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
@@ -13,23 +13,25 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 
 interface EnclosureListPageProps {
-  params: Promise<{ zooId: string; siteId: string }>; // Updated type to Promise
+  params: Promise<{ zooId: string; siteId: string }>; 
 }
 
 export default function EnclosureListPage({ params: paramsPromise }: EnclosureListPageProps) {
-  const params = use(paramsPromise); // Unwrap params using React.use()
+  const params = use(paramsPromise); 
   const { zooId, siteId } = params;
 
+  const { getSiteById: getSiteByIdFromContext, getZooById: getZooByIdFromContext, isLoading: isZooDataLoading } = useZooData(); // Use context
   const [zoo, setZoo] = useState<Zoo | null | undefined>(null);
   const [site, setSite] = useState<Site | null | undefined>(null);
   
   const { setBreadcrumbs } = useBreadcrumbs();
 
   useEffect(() => {
-    const currentZoo = getZooById(zooId);
+    const currentZoo = getZooByIdFromContext(zooId);
     setZoo(currentZoo);
+
     if (currentZoo) {
-      const currentSite = getSiteById(currentZoo, siteId);
+      const currentSite = getSiteByIdFromContext(zooId, siteId);
       setSite(currentSite);
       
       if (currentSite) {
@@ -38,20 +40,23 @@ export default function EnclosureListPage({ params: paramsPromise }: EnclosureLi
           { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/enclosures` },
         ];
         setBreadcrumbs(breadcrumbsData);
-      } else {
-         setBreadcrumbs([
+      } else if (!isZooDataLoading) {
+        setSite(undefined); // Not found
+        setBreadcrumbs([
           { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
           { label: "Site Not Found", href: `/zoos/${zooId}/sites` }
         ]);
       }
-    } else {
-      setBreadcrumbs([{label: "Zoo Not Found", href: "/dashboard"}]);
+    } else if (!isZooDataLoading) {
+        setZoo(undefined); // Not found
+        setBreadcrumbs([{label: "Zoo Not Found", href: "/dashboard"}]);
     }
-  }, [zooId, siteId, setBreadcrumbs]);
+  }, [zooId, siteId, getSiteByIdFromContext, getZooByIdFromContext, setBreadcrumbs, isZooDataLoading]);
 
-  if (zoo === null || site === null) { // Loading state
+  if (isZooDataLoading || zoo === null || (zoo && site === null)) { // Loading state
      return (
       <div>
+        <Skeleton className="h-10 w-36 mb-6" />
         <Skeleton className="h-10 w-1/2 mb-2" />
         <Skeleton className="h-8 w-1/3 mb-2" />
         <Skeleton className="h-6 w-1/4 mb-8" />

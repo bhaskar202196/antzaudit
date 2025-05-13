@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'; // Using Inter for a modern look
 import './globals.css';
 import { AuthProvider } from '@/hooks/use-auth';
 import { BreadcrumbProvider } from '@/contexts/breadcrumb-context';
+import { ZooDataProvider } from '@/contexts/zoo-data-context'; // Import ZooDataProvider
 import { MainAppLayout } from '@/components/layout/main-app-layout';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -21,9 +22,11 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className="font-sans antialiased">
         <AuthProvider>
-          <BreadcrumbProvider>
-            <MainAppLayout>{children}</MainAppLayout>
-          </BreadcrumbProvider>
+          <ZooDataProvider> {/* Add ZooDataProvider here */}
+            <BreadcrumbProvider>
+              <MainAppLayout>{children}</MainAppLayout>
+            </BreadcrumbProvider>
+          </ZooDataProvider>
         </AuthProvider>
       </body>
     </html>

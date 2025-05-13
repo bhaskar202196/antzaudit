@@ -1,10 +1,10 @@
 // src/app/zoos/[zooId]/sites/[siteId]/enclosures/[enclosureId]/animals/page.tsx
 "use client";
 import type { Animal, Enclosure, Site, Zoo } from '@/lib/types';
-import { getZooById, getSiteById, getEnclosureById } from '@/lib/data';
 import AnimalListItem from '@/components/zoo/animal-list-item';
-import { use, useEffect, useState, useCallback } from 'react'; // Added 'use'
+import { use, useEffect, useState, useCallback } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
+import { useZooData } from '@/contexts/zoo-data-context'; // Import useZooData
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertTriangle, Download } from 'lucide-react';
@@ -12,25 +12,27 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface AnimalVerificationPageProps {
-  params: Promise<{ zooId: string; siteId: string; enclosureId: string }>; // Updated type to Promise
+  params: Promise<{ zooId: string; siteId: string; enclosureId: string }>;
 }
 
 // Helper function to convert animal data to CSV format
 const convertAnimalsToCSV = (animals: Animal[], enclosureName: string): string => {
-  const headers = ['ID', 'Name', 'Species', 'Verified', 'Verified At'];
+  const headers = ['ID', 'Name', 'Species', 'Common Name', 'Gender', 'Verified', 'Verified At', 
+                   'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue', 
+                   'BreedName', 'MorphName', 'Weight', 'Age', 
+                   'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row'];
   const rows = animals.map(animal => [
-    animal.id,
-    animal.name,
-    animal.species,
+    animal.id, animal.name, animal.species, animal.commonName, animal.gender,
     animal.verified ? 'Yes' : 'No',
-    animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : ''
+    animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : '',
+    animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
+    animal.breedName, animal.morphName, animal.weight, animal.age,
+    animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber
   ]);
 
-  // Escaping fields that might contain commas or quotes
-  const escapeField = (field: string | number | boolean | undefined) => {
+  const escapeField = (field: string | number | boolean | undefined | null) => {
     if (field === null || field === undefined) return '';
     const stringField = String(field);
-    // Replace " with "" and wrap in " if it contains , or " or newline
     if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
       return `"${stringField.replace(/"/g, '""')}"`;
     }
@@ -47,93 +49,102 @@ const convertAnimalsToCSV = (animals: Animal[], enclosureName: string): string =
 
 
 export default function AnimalVerificationPage({ params: paramsPromise }: AnimalVerificationPageProps) {
-  const params = use(paramsPromise); // Unwrap params using React.use()
+  const params = use(paramsPromise);
   const { zooId, siteId, enclosureId } = params;
+
+  const { 
+    getEnclosureById: getEnclosureByIdFromContext, 
+    getSiteById: getSiteByIdFromContext,
+    getZooById: getZooByIdFromContext,
+    updateAnimalVerification, 
+    isLoading: isZooDataLoading 
+  } = useZooData();
 
   const [zoo, setZoo] = useState<Zoo | null | undefined>(null);
   const [site, setSite] = useState<Site | null | undefined>(null);
   const [enclosure, setEnclosure] = useState<Enclosure | null | undefined>(null);
-  const [animals, setAnimals] = useState<Animal[]>([]);
-
+  // Animals state will be derived from enclosure, no separate state needed for the list itself
+  
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
 
   useEffect(() => {
-    const currentZoo = getZooById(zooId);
+    const currentZoo = getZooByIdFromContext(zooId);
     setZoo(currentZoo);
     if (currentZoo) {
-      const currentSite = getSiteById(currentZoo, siteId);
+      const currentSite = getSiteByIdFromContext(zooId, siteId);
       setSite(currentSite);
       if (currentSite) {
-        const currentEnclosure = getEnclosureById(currentSite, enclosureId);
+        const currentEnclosure = getEnclosureByIdFromContext(zooId, siteId, enclosureId);
         setEnclosure(currentEnclosure);
         if (currentEnclosure) {
-          setAnimals(currentEnclosure.animals.map(a => ({...a}))); 
           const breadcrumbsData: BreadcrumbItem[] = [
             { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
             { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/enclosures` },
             { label: currentEnclosure.name, href: `/zoos/${zooId}/sites/${siteId}/enclosures/${enclosureId}/animals` },
           ];
           setBreadcrumbs(breadcrumbsData);
-        } else {
+        } else if (!isZooDataLoading) {
+          setEnclosure(undefined);
           setBreadcrumbs([
             { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
             { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/enclosures` },
             { label: "Enclosure Not Found", href: `/zoos/${zooId}/sites/${siteId}/enclosures` }
           ]);
         }
-      } else {
-         setBreadcrumbs([
+      } else if (!isZooDataLoading) {
+        setSite(undefined);
+        setBreadcrumbs([
           { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
           { label: "Site Not Found", href: `/zoos/${zooId}/sites` }
         ]);
       }
-    } else {
+    } else if(!isZooDataLoading) {
+      setZoo(undefined);
       setBreadcrumbs([{label: "Zoo Not Found", href: "/dashboard"}]);
     }
-  }, [zooId, siteId, enclosureId, setBreadcrumbs]);
+  }, [zooId, siteId, enclosureId, getZooByIdFromContext, getSiteByIdFromContext, getEnclosureByIdFromContext, setBreadcrumbs, isZooDataLoading]);
 
   const handleToggleVerify = useCallback((animalId: string) => {
-    setAnimals(prevAnimals =>
-      prevAnimals.map(animal => {
-        if (animal.id === animalId) {
-          const isNowVerified = !animal.verified;
-          const updatedAnimal = { 
-            ...animal, 
-            verified: isNowVerified,
-            verifiedAt: isNowVerified ? new Date().toISOString() : undefined
-          };
-          
-          setTimeout(() => {
-            let toastTitle = `Animal ${updatedAnimal.verified ? 'Verified' : 'Unverified'}`;
-            let toastDescription = `${updatedAnimal.name} (${updatedAnimal.species}) status updated.`;
-            if (updatedAnimal.verified && updatedAnimal.verifiedAt) {
-              toastDescription = `${updatedAnimal.name} (${updatedAnimal.species}) verified on ${new Date(updatedAnimal.verifiedAt).toLocaleString()}.`;
-            }
+    if (!enclosure) return;
+    
+    const animalToUpdate = enclosure.animals.find(a => a.id === animalId);
+    if (!animalToUpdate) return;
 
+    const isNowVerified = !animalToUpdate.verified;
+    const newVerifiedAt = isNowVerified ? new Date().toISOString() : undefined;
+    
+    updateAnimalVerification(zooId, siteId, enclosureId, animalId, isNowVerified, newVerifiedAt);
+
+    // Toast needs to be triggered after state update has likely propagated
+    setTimeout(() => {
+        const currentAnimal = getEnclosureByIdFromContext(zooId, siteId, enclosureId)?.animals.find(a => a.id === animalId);
+        if (currentAnimal) {
+            let toastTitle = `Animal ${currentAnimal.verified ? 'Verified' : 'Unverified'}`;
+            let toastDescription = `${currentAnimal.name} (${currentAnimal.species}) status updated.`;
+            if (currentAnimal.verified && currentAnimal.verifiedAt) {
+                toastDescription = `${currentAnimal.name} (${currentAnimal.species}) verified on ${new Date(currentAnimal.verifiedAt).toLocaleString()}.`;
+            }
             toast({
-              title: toastTitle,
-              description: toastDescription,
-              variant: updatedAnimal.verified ? 'default' : 'default', 
-              className: updatedAnimal.verified ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground'
+                title: toastTitle,
+                description: toastDescription,
+                variant: currentAnimal.verified ? 'default' : 'default', 
+                className: currentAnimal.verified ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground'
             });
-          }, 0);
-          return updatedAnimal;
         }
-        return animal;
-      })
-    );
-  }, [toast]);
+    }, 0);
+
+  }, [enclosure, zooId, siteId, enclosureId, updateAnimalVerification, toast, getEnclosureByIdFromContext]);
 
   const handleExportCSV = useCallback(() => {
-    if (!enclosure || animals.length === 0) {
+    if (!enclosure || !enclosure.animals || enclosure.animals.length === 0) {
       setTimeout(() => {
         toast({ title: "No Data", description: "There are no animals to export.", variant: "destructive" });
-      }, 0);
+      },0);
       return;
     }
     try {
-      const csvData = convertAnimalsToCSV(animals, enclosure.name);
+      const csvData = convertAnimalsToCSV(enclosure.animals, enclosure.name);
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -146,20 +157,21 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
       URL.revokeObjectURL(url);
       setTimeout(() => {
         toast({ title: "Export Successful", description: `Animal data for ${enclosure.name} has been downloaded.` });
-      }, 0);
+      },0);
     } catch (error) {
       console.error("Failed to export CSV:", error);
       setTimeout(() => {
         toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
-      }, 0);
+      },0);
     }
-  }, [animals, enclosure, toast]);
+  }, [enclosure, toast]);
   
-  if (zoo === null || site === null || enclosure === null) { 
+  if (isZooDataLoading || zoo === null || (zoo && site === null) || (zoo && site && enclosure === null) ) { 
     return (
       <div>
-        <Skeleton className="h-10 w-3/4 mb-2" />
-        <Skeleton className="h-8 w-1/2 mb-2" />
+        <Skeleton className="h-10 w-36 mb-6" /> {/* Back button skeleton */}
+        <Skeleton className="h-10 w-3/4 mb-2" /> {/* Title skeleton */}
+        <Skeleton className="h-8 w-1/2 mb-2" /> {/* Subtitle skeleton */}
         <Skeleton className="h-6 w-1/3 mb-2" />
         <Skeleton className="h-6 w-1/4 mb-8" />
         <div className="space-y-4">
@@ -185,6 +197,8 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
       </div>
     );
   }
+
+  const animals = enclosure.animals; // Get animals from the current enclosure state
 
   return (
     <div className="animate-fadeIn">

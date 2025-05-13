@@ -4,6 +4,7 @@ export const MOCK_USERS: User[] = [
   { id: 'user1', email: 'auditor@example.com' },
 ];
 
+// Renamed to INITIAL_MOCK_ZOOS to indicate it's the starting data for the context
 export const MOCK_ZOOS: Zoo[] = [
   {
     id: 'zoo1',
@@ -24,8 +25,15 @@ export const MOCK_ZOOS: Zoo[] = [
             type: 'Large Mammal Exhibit',
             imageUrl: 'https://picsum.photos/seed/enc1/600/400',
             animals: [
-              { id: 'animal1', name: 'Leo', species: 'Lion', verified: false, imageUrl: 'https://picsum.photos/seed/animal1/100/100' },
-              { id: 'animal2', name: 'Leona', species: 'Lion', verified: true, verifiedAt: new Date(Date.now() - 86400000).toISOString(), imageUrl: 'https://picsum.photos/seed/animal2/100/100' }, // Verified yesterday
+              { 
+                id: 'animal1', name: 'Leo', species: 'Lion', verified: false, 
+                imageUrl: 'https://picsum.photos/seed/animal1/100/100', commonName: 'Lion'
+              },
+              { 
+                id: 'animal2', name: 'Leona', species: 'Lion', verified: true, 
+                verifiedAt: new Date(Date.now() - 86400000).toISOString(), 
+                imageUrl: 'https://picsum.photos/seed/animal2/100/100', commonName: 'Lion'
+              }, 
             ],
           },
           {
@@ -34,7 +42,10 @@ export const MOCK_ZOOS: Zoo[] = [
             type: 'Hoofed Animals Area',
             imageUrl: 'https://picsum.photos/seed/enc2/600/400',
             animals: [
-              { id: 'animal3', name: 'Stripes', species: 'Zebra', verified: false, imageUrl: 'https://picsum.photos/seed/animal3/100/100' },
+              { 
+                id: 'animal3', name: 'Stripes', species: 'Zebra', verified: false, 
+                imageUrl: 'https://picsum.photos/seed/animal3/100/100', commonName: 'Zebra'
+              },
             ],
           },
         ],
@@ -51,8 +62,14 @@ export const MOCK_ZOOS: Zoo[] = [
             type: 'Primate Habitat',
             imageUrl: 'https://picsum.photos/seed/enc3/600/400',
             animals: [
-              { id: 'animal4', name: 'Miko', species: 'Capuchin Monkey', verified: false, imageUrl: 'https://picsum.photos/seed/animal4/100/100' },
-              { id: 'animal5', name: 'Momo', species: 'Capuchin Monkey', verified: false, imageUrl: 'https://picsum.photos/seed/animal5/100/100' },
+              { 
+                id: 'animal4', name: 'Miko', species: 'Capuchin Monkey', verified: false, 
+                imageUrl: 'https://picsum.photos/seed/animal4/100/100', commonName: 'Capuchin Monkey'
+              },
+              { 
+                id: 'animal5', name: 'Momo', species: 'Capuchin Monkey', verified: false, 
+                imageUrl: 'https://picsum.photos/seed/animal5/100/100', commonName: 'Capuchin Monkey'
+              },
             ],
           },
         ],
@@ -78,7 +95,11 @@ export const MOCK_ZOOS: Zoo[] = [
             type: 'Arctic Exhibit',
             imageUrl: 'https://picsum.photos/seed/enc4/600/400',
             animals: [
-              { id: 'animal6', name: 'Snowy', species: 'Polar Bear', verified: true, verifiedAt: new Date(Date.now() - 2*86400000).toISOString(), imageUrl: 'https://picsum.photos/seed/animal6/100/100' }, // Verified two days ago
+              { 
+                id: 'animal6', name: 'Snowy', species: 'Polar Bear', verified: true, 
+                verifiedAt: new Date(Date.now() - 2*86400000).toISOString(), 
+                imageUrl: 'https://picsum.photos/seed/animal6/100/100', commonName: 'Polar Bear'
+              },
             ],
           },
         ],
@@ -87,19 +108,5 @@ export const MOCK_ZOOS: Zoo[] = [
   },
 ];
 
-// Helper functions to get data
-export const getZoosByUserId = (userId: string): Zoo[] => {
-  return MOCK_ZOOS.filter(zoo => zoo.userId === userId);
-}
-
-export const getZooById = (zooId: string): Zoo | undefined => {
-  return MOCK_ZOOS.find(zoo => zoo.id === zooId);
-}
-
-export const getSiteById = (zoo: Zoo, siteId: string) => {
-  return zoo.sites.find(site => site.id === siteId);
-}
-
-export const getEnclosureById = (site: NonNullable<ReturnType<typeof getSiteById>>, enclosureId: string) => {
-  return site.enclosures.find(enclosure => enclosure.id === enclosureId);
-}
+// Data fetching/retrieval functions (getZooById, getSiteById, etc.) are now part of ZooDataContext
+// This file now primarily serves to export initial mock data and user data.
