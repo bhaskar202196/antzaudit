@@ -25,7 +25,7 @@ export const MOCK_ZOOS: Zoo[] = [
             imageUrl: 'https://picsum.photos/seed/enc1/600/400',
             animals: [
               { id: 'animal1', name: 'Leo', species: 'Lion', verified: false, imageUrl: 'https://picsum.photos/seed/animal1/100/100' },
-              { id: 'animal2', name: 'Leona', species: 'Lion', verified: true, imageUrl: 'https://picsum.photos/seed/animal2/100/100' },
+              { id: 'animal2', name: 'Leona', species: 'Lion', verified: true, verifiedAt: new Date(Date.now() - 86400000).toISOString(), imageUrl: 'https://picsum.photos/seed/animal2/100/100' }, // Verified yesterday
             ],
           },
           {
@@ -78,7 +78,7 @@ export const MOCK_ZOOS: Zoo[] = [
             type: 'Arctic Exhibit',
             imageUrl: 'https://picsum.photos/seed/enc4/600/400',
             animals: [
-              { id: 'animal6', name: 'Snowy', species: 'Polar Bear', verified: true, imageUrl: 'https://picsum.photos/seed/animal6/100/100' },
+              { id: 'animal6', name: 'Snowy', species: 'Polar Bear', verified: true, verifiedAt: new Date(Date.now() - 2*86400000).toISOString(), imageUrl: 'https://picsum.photos/seed/animal6/100/100' }, // Verified two days ago
             ],
           },
         ],

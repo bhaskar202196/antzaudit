@@ -8,6 +8,7 @@ export interface Animal {
   name: string;
   species: string;
   verified: boolean;
+  verifiedAt?: string; // ISO string for when the animal was last verified
   imageUrl?: string; // Optional image for the animal
 }
 

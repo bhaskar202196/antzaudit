@@ -7,13 +7,44 @@ import { useEffect, useState, useCallback } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Download } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface AnimalVerificationPageProps {
   params: { zooId: string; siteId: string; enclosureId: string };
 }
+
+// Helper function to convert animal data to CSV format
+const convertAnimalsToCSV = (animals: Animal[], enclosureName: string): string => {
+  const headers = ['ID', 'Name', 'Species', 'Verified', 'Verified At'];
+  const rows = animals.map(animal => [
+    animal.id,
+    animal.name,
+    animal.species,
+    animal.verified ? 'Yes' : 'No',
+    animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : ''
+  ]);
+
+  // Escaping fields that might contain commas or quotes
+  const escapeField = (field: string | number | boolean | undefined) => {
+    if (field === null || field === undefined) return '';
+    const stringField = String(field);
+    // Replace " with "" and wrap in " if it contains , or " or newline
+    if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+      return `"${stringField.replace(/"/g, '""')}"`;
+    }
+    return stringField;
+  };
+
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.map(escapeField).join(','))
+  ].join('\n');
+  
+  return csvContent;
+};
+
 
 export default function AnimalVerificationPage({ params }: AnimalVerificationPageProps) {
   const { zooId, siteId, enclosureId } = params;
@@ -35,7 +66,7 @@ export default function AnimalVerificationPage({ params }: AnimalVerificationPag
         const currentEnclosure = getEnclosureById(currentSite, enclosureId);
         setEnclosure(currentEnclosure);
         if (currentEnclosure) {
-          setAnimals(currentEnclosure.animals.map(a => ({...a}))); // Create a mutable copy for local state updates
+          setAnimals(currentEnclosure.animals.map(a => ({...a}))); 
           const breadcrumbsData: BreadcrumbItem[] = [
             { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
             { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/enclosures` },
@@ -64,11 +95,23 @@ export default function AnimalVerificationPage({ params }: AnimalVerificationPag
     setAnimals(prevAnimals =>
       prevAnimals.map(animal => {
         if (animal.id === animalId) {
-          const updatedAnimal = { ...animal, verified: !animal.verified };
+          const isNowVerified = !animal.verified;
+          const updatedAnimal = { 
+            ...animal, 
+            verified: isNowVerified,
+            verifiedAt: isNowVerified ? new Date().toISOString() : undefined
+          };
+          
+          let toastTitle = `Animal ${updatedAnimal.verified ? 'Verified' : 'Unverified'}`;
+          let toastDescription = `${updatedAnimal.name} (${updatedAnimal.species}) status updated.`;
+          if (updatedAnimal.verified && updatedAnimal.verifiedAt) {
+            toastDescription = `${updatedAnimal.name} (${updatedAnimal.species}) verified on ${new Date(updatedAnimal.verifiedAt).toLocaleString()}.`;
+          }
+
           toast({
-            title: `Animal ${updatedAnimal.verified ? 'Verified' : 'Unverified'}`,
-            description: `${updatedAnimal.name} (${updatedAnimal.species}) status updated.`,
-            variant: updatedAnimal.verified ? 'default' : 'default', // 'default' for green using accent, or custom variant
+            title: toastTitle,
+            description: toastDescription,
+            variant: updatedAnimal.verified ? 'default' : 'default', 
             className: updatedAnimal.verified ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground'
           });
           return updatedAnimal;
@@ -76,10 +119,33 @@ export default function AnimalVerificationPage({ params }: AnimalVerificationPag
         return animal;
       })
     );
-    // In a real app, you would also persist this change to the backend.
   }, [toast]);
+
+  const handleExportCSV = useCallback(() => {
+    if (!enclosure || animals.length === 0) {
+      toast({ title: "No Data", description: "There are no animals to export.", variant: "destructive" });
+      return;
+    }
+    try {
+      const csvData = convertAnimalsToCSV(animals, enclosure.name);
+      const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${enclosure.name.replace(/\s+/g, '_')}_animals_export.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast({ title: "Export Successful", description: `Animal data for ${enclosure.name} has been downloaded.` });
+    } catch (error) {
+      console.error("Failed to export CSV:", error);
+      toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
+    }
+  }, [animals, enclosure, toast]);
   
-  if (zoo === null || site === null || enclosure === null) { // Loading state
+  if (zoo === null || site === null || enclosure === null) { 
     return (
       <div>
         <Skeleton className="h-10 w-3/4 mb-2" />
@@ -95,7 +161,7 @@ export default function AnimalVerificationPage({ params }: AnimalVerificationPag
     );
   }
 
-  if (zoo === undefined || site === undefined || enclosure === undefined) { // Not found state
+  if (zoo === undefined || site === undefined || enclosure === undefined) { 
      return (
       <div className="flex flex-col items-center justify-center text-center py-10">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
@@ -112,11 +178,19 @@ export default function AnimalVerificationPage({ params }: AnimalVerificationPag
 
   return (
     <div className="animate-fadeIn">
-      <Button asChild variant="outline" className="mb-6">
-        <Link href={`/zoos/${zooId}/sites/${siteId}/enclosures`}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Enclosures in {site.name}
-        </Link>
-      </Button>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <Button asChild variant="outline">
+          <Link href={`/zoos/${zooId}/sites/${siteId}/enclosures`}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Enclosures in {site.name}
+          </Link>
+        </Button>
+        {animals.length > 0 && (
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" /> Export to CSV
+          </Button>
+        )}
+      </div>
+
       <h1 className="text-4xl font-bold mb-2 tracking-tight text-gray-800">{enclosure.name}</h1>
       <p className="text-xl text-muted-foreground mb-8">Animals for Verification</p>
       

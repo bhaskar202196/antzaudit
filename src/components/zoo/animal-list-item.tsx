@@ -4,7 +4,7 @@ import type { Animal } from '@/lib/types';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PawPrint, CheckCircle, CircleOff, Tag } from 'lucide-react'; // Using PawPrint for animal icon
+import { PawPrint, CheckCircle, CircleOff, Tag, Clock } from 'lucide-react'; 
 import { Badge } from '@/components/ui/badge';
 
 interface AnimalListItemProps {
@@ -13,6 +13,10 @@ interface AnimalListItemProps {
 }
 
 export default function AnimalListItem({ animal, onToggleVerify }: AnimalListItemProps) {
+  const verificationDate = animal.verified && animal.verifiedAt 
+    ? new Date(animal.verifiedAt).toLocaleString() 
+    : null;
+
   return (
     <Card className="flex flex-col sm:flex-row items-center p-4 gap-4 shadow-md hover:shadow-lg transition-shadow duration-300">
       {animal.imageUrl && (
@@ -40,6 +44,11 @@ export default function AnimalListItem({ animal, onToggleVerify }: AnimalListIte
         <CardDescription className="flex items-center justify-center sm:justify-start text-sm text-muted-foreground">
           <Tag className="mr-1 h-3 w-3" /> Species: {animal.species}
         </CardDescription>
+        {animal.verified && verificationDate && (
+          <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center sm:justify-start">
+            <Clock className="mr-1 h-3 w-3" /> Verified on: {verificationDate}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col items-center sm:items-end gap-2 mt-2 sm:mt-0">
@@ -58,9 +67,9 @@ export default function AnimalListItem({ animal, onToggleVerify }: AnimalListIte
           className={`w-full sm:w-auto ${!animal.verified ? 'bg-accent text-accent-foreground hover:bg-accent/90 focus-visible:ring-accent' : 'border-accent text-accent hover:bg-accent/10 focus-visible:ring-accent'}`}
         >
           {animal.verified ? (
-            <><CheckCircle size={18} className="mr-2" /> Unverify</>
+            <><CircleOff size={18} className="mr-2" /> Unverify</>
           ) : (
-            <><CircleOff size={18} className="mr-2" /> Verify</>
+            <><CheckCircle size={18} className="mr-2" /> Verify</>
           )}
         </Button>
       </div>
