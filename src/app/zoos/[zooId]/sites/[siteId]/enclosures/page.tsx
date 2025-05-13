@@ -4,7 +4,7 @@
 import type { Enclosure, Site, Zoo } from '@/lib/types';
 import { getZooById, getSiteById } from '@/lib/data';
 import EnclosureCard from '@/components/zoo/enclosure-card';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react'; // Added 'use'
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -13,11 +13,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 
 interface EnclosureListPageProps {
-  params: { zooId: string; siteId: string };
+  params: Promise<{ zooId: string; siteId: string }>; // Updated type to Promise
 }
 
-export default function EnclosureListPage({ params }: EnclosureListPageProps) {
+export default function EnclosureListPage({ params: paramsPromise }: EnclosureListPageProps) {
+  const params = use(paramsPromise); // Unwrap params using React.use()
   const { zooId, siteId } = params;
+
   const [zoo, setZoo] = useState<Zoo | null | undefined>(null);
   const [site, setSite] = useState<Site | null | undefined>(null);
   
@@ -49,31 +51,29 @@ export default function EnclosureListPage({ params }: EnclosureListPageProps) {
 
   if (zoo === null || site === null) { // Loading state
      return (
-      <>
-        <div>
-          <Skeleton className="h-10 w-1/2 mb-2" />
-          <Skeleton className="h-8 w-1/3 mb-2" />
-          <Skeleton className="h-6 w-1/4 mb-8" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <Card key={i} className="flex flex-col">
-                <Skeleton className="h-48 w-full" />
-                <CardHeader>
-                  <Skeleton className="h-7 w-3/4 mb-2" />
-                  <Skeleton className="h-5 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-4 w-full mb-1" />
-                  <Skeleton className="h-4 w-5/6" />
-                </CardContent>
-                <CardFooter>
-                  <Skeleton className="h-10 w-full" />
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+      <div>
+        <Skeleton className="h-10 w-1/2 mb-2" />
+        <Skeleton className="h-8 w-1/3 mb-2" />
+        <Skeleton className="h-6 w-1/4 mb-8" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="flex flex-col">
+              <Skeleton className="h-48 w-full" />
+              <CardHeader>
+                <Skeleton className="h-7 w-3/4 mb-2" />
+                <Skeleton className="h-5 w-1/2" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-5/6" />
+              </CardContent>
+              <CardFooter>
+                <Skeleton className="h-10 w-full" />
+              </CardFooter>
+            </Card>
+          ))}
         </div>
-      </>
+      </div>
     );
   }
 

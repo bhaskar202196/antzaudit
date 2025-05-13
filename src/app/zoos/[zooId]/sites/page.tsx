@@ -3,7 +3,7 @@
 import type { Site, Zoo } from '@/lib/types';
 import { getZooById } from '@/lib/data';
 import SiteCard from '@/components/zoo/site-card';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react'; // Added 'use'
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -12,11 +12,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 
 interface ZooSitesPageProps {
-  params: { zooId: string };
+  params: Promise<{ zooId: string }>; // Updated type to Promise
 }
 
-export default function ZooSitesPage({ params }: ZooSitesPageProps) {
+export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProps) {
+  const params = use(paramsPromise); // Unwrap params using React.use()
   const { zooId } = params;
+
   const [zoo, setZoo] = useState<Zoo | null | undefined>(null); // null for loading, undefined for not found
   const { setBreadcrumbs } = useBreadcrumbs();
 

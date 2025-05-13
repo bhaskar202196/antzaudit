@@ -3,7 +3,7 @@
 import type { Animal, Enclosure, Site, Zoo } from '@/lib/types';
 import { getZooById, getSiteById, getEnclosureById } from '@/lib/data';
 import AnimalListItem from '@/components/zoo/animal-list-item';
-import { useEffect, useState, useCallback } from 'react';
+import { use, useEffect, useState, useCallback } from 'react'; // Added 'use'
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface AnimalVerificationPageProps {
-  params: { zooId: string; siteId: string; enclosureId: string };
+  params: Promise<{ zooId: string; siteId: string; enclosureId: string }>; // Updated type to Promise
 }
 
 // Helper function to convert animal data to CSV format
@@ -46,8 +46,10 @@ const convertAnimalsToCSV = (animals: Animal[], enclosureName: string): string =
 };
 
 
-export default function AnimalVerificationPage({ params }: AnimalVerificationPageProps) {
+export default function AnimalVerificationPage({ params: paramsPromise }: AnimalVerificationPageProps) {
+  const params = use(paramsPromise); // Unwrap params using React.use()
   const { zooId, siteId, enclosureId } = params;
+
   const [zoo, setZoo] = useState<Zoo | null | undefined>(null);
   const [site, setSite] = useState<Site | null | undefined>(null);
   const [enclosure, setEnclosure] = useState<Enclosure | null | undefined>(null);
