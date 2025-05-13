@@ -104,18 +104,20 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
             verifiedAt: isNowVerified ? new Date().toISOString() : undefined
           };
           
-          let toastTitle = `Animal ${updatedAnimal.verified ? 'Verified' : 'Unverified'}`;
-          let toastDescription = `${updatedAnimal.name} (${updatedAnimal.species}) status updated.`;
-          if (updatedAnimal.verified && updatedAnimal.verifiedAt) {
-            toastDescription = `${updatedAnimal.name} (${updatedAnimal.species}) verified on ${new Date(updatedAnimal.verifiedAt).toLocaleString()}.`;
-          }
+          setTimeout(() => {
+            let toastTitle = `Animal ${updatedAnimal.verified ? 'Verified' : 'Unverified'}`;
+            let toastDescription = `${updatedAnimal.name} (${updatedAnimal.species}) status updated.`;
+            if (updatedAnimal.verified && updatedAnimal.verifiedAt) {
+              toastDescription = `${updatedAnimal.name} (${updatedAnimal.species}) verified on ${new Date(updatedAnimal.verifiedAt).toLocaleString()}.`;
+            }
 
-          toast({
-            title: toastTitle,
-            description: toastDescription,
-            variant: updatedAnimal.verified ? 'default' : 'default', 
-            className: updatedAnimal.verified ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground'
-          });
+            toast({
+              title: toastTitle,
+              description: toastDescription,
+              variant: updatedAnimal.verified ? 'default' : 'default', 
+              className: updatedAnimal.verified ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground'
+            });
+          }, 0);
           return updatedAnimal;
         }
         return animal;
@@ -125,7 +127,9 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
 
   const handleExportCSV = useCallback(() => {
     if (!enclosure || animals.length === 0) {
-      toast({ title: "No Data", description: "There are no animals to export.", variant: "destructive" });
+      setTimeout(() => {
+        toast({ title: "No Data", description: "There are no animals to export.", variant: "destructive" });
+      }, 0);
       return;
     }
     try {
@@ -140,10 +144,14 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast({ title: "Export Successful", description: `Animal data for ${enclosure.name} has been downloaded.` });
+      setTimeout(() => {
+        toast({ title: "Export Successful", description: `Animal data for ${enclosure.name} has been downloaded.` });
+      }, 0);
     } catch (error) {
       console.error("Failed to export CSV:", error);
-      toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
+      setTimeout(() => {
+        toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
+      }, 0);
     }
   }, [animals, enclosure, toast]);
   

@@ -84,14 +84,18 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
 
   const handleExportZooCSV = useCallback(() => {
     if (!zoo) {
-      toast({ title: "Error", description: "Zoo data not loaded yet.", variant: "destructive" });
+      setTimeout(() => {
+        toast({ title: "Error", description: "Zoo data not loaded yet.", variant: "destructive" });
+      }, 0);
       return;
     }
 
     const { csv: csvData, hasData } = convertZooDataToCSV(zoo);
 
     if (!hasData) {
-      toast({ title: "No Data", description: `No animal data found in ${zoo.name} to export.`, variant: "default", className: "bg-secondary text-secondary-foreground" });
+      setTimeout(() => {
+        toast({ title: "No Data", description: `No animal data found in ${zoo.name} to export.`, variant: "default", className: "bg-secondary text-secondary-foreground" });
+      }, 0);
       // Still proceed to download CSV with headers if user wants an empty template
     }
     
@@ -106,10 +110,14 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast({ title: "Export Successful", description: `All data for ${zoo.name} has been downloaded.` });
+      setTimeout(() => {
+        toast({ title: "Export Successful", description: `All data for ${zoo.name} has been downloaded.` });
+      }, 0);
     } catch (error) {
       console.error("Failed to export Zoo CSV:", error);
-      toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
+      setTimeout(() => {
+        toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
+      }, 0);
     }
   }, [zoo, toast]);
 
