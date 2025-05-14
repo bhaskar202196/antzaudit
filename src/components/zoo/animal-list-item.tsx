@@ -2,9 +2,12 @@
 "use client";
 import type { Animal } from '@/lib/types';
 import Image from 'next/image';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PawPrint, CheckCircle, CircleOff, Tag, Clock } from 'lucide-react'; 
+import { 
+  PawPrint, CheckCircle, CircleOff, Tag, Clock, Disc3, Fingerprint, Milestone, 
+  Scale, CalendarDays, BadgeHelp, PackagePlus, Info, WeightIcon, VenetianMask, Dna, AlignLeft
+} from 'lucide-react'; 
 import { Badge } from '@/components/ui/badge';
 
 interface AnimalListItemProps {
@@ -12,66 +15,111 @@ interface AnimalListItemProps {
   onToggleVerify: (animalId: string) => void;
 }
 
+const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: string | number | null }> = ({ icon: Icon, label, value }) => {
+  if (!value && typeof value !== 'number') return null;
+  return (
+    <div className="flex items-center text-xs text-muted-foreground">
+      <Icon className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
+      <span className="font-medium">{label}:</span>&nbsp;
+      <span className="truncate" title={String(value)}>{String(value)}</span>
+    </div>
+  );
+};
+
 export default function AnimalListItem({ animal, onToggleVerify }: AnimalListItemProps) {
   const verificationDate = animal.verified && animal.verifiedAt 
     ? new Date(animal.verifiedAt).toLocaleString() 
     : null;
 
-  return (
-    <Card className="flex flex-col sm:flex-row items-center p-4 gap-4 shadow-md hover:shadow-lg transition-shadow duration-300">
-      {animal.imageUrl && (
-         <div className="relative h-24 w-24 sm:h-20 sm:w-20 rounded-lg overflow-hidden flex-shrink-0">
-          <Image 
-            src={animal.imageUrl} 
-            alt={`Image of ${animal.name}`} 
-            layout="fill" 
-            objectFit="cover"
-            data-ai-hint={`${animal.species} animal`}
-          />
-        </div>
-      )}
-      {!animal.imageUrl && (
-        <div className="h-24 w-24 sm:h-20 sm:w-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-          <PawPrint className="h-10 w-10 text-muted-foreground" />
-        </div>
-      )}
-      
-      <div className="flex-grow text-center sm:text-left">
-        <CardTitle className="text-xl font-semibold flex items-center justify-center sm:justify-start">
-          <PawPrint className="mr-2 h-5 w-5 text-primary hidden sm:inline" />
-          {animal.name}
-        </CardTitle>
-        <CardDescription className="flex items-center justify-center sm:justify-start text-sm text-muted-foreground">
-          <Tag className="mr-1 h-3 w-3" /> Species: {animal.species}
-        </CardDescription>
-        {animal.verified && verificationDate && (
-          <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center sm:justify-start">
-            <Clock className="mr-1 h-3 w-3" /> Verified on: {verificationDate}
-          </p>
-        )}
-      </div>
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return undefined;
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch (e) {
+      return dateString; // return original if parsing fails
+    }
+  }
 
-      <div className="flex flex-col items-center sm:items-end gap-2 mt-2 sm:mt-0">
-        {animal.verified ? (
-          <Badge variant="default" className="bg-accent text-accent-foreground select-none">
-            <CheckCircle size={16} className="mr-1" /> Verified
-          </Badge>
-        ) : (
-          <Badge variant="secondary" className="select-none">
-            <CircleOff size={16} className="mr-1" /> Not Verified
-          </Badge>
+  return (
+    <Card className="flex flex-col shadow-md hover:shadow-lg transition-shadow duration-300">
+      <div className="flex flex-col sm:flex-row items-center p-4 gap-4">
+        {animal.imageUrl && (
+           <div className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden flex-shrink-0">
+            <Image 
+              src={animal.imageUrl} 
+              alt={`Image of ${animal.name}`} 
+              layout="fill" 
+              objectFit="cover"
+              data-ai-hint={`${animal.species} animal`}
+            />
+          </div>
         )}
-        <Button
-          onClick={() => onToggleVerify(animal.id)}
-          variant={animal.verified ? "outline" : "default"}
-          className={`w-full sm:w-auto ${!animal.verified ? 'bg-accent text-accent-foreground hover:bg-accent/90 focus-visible:ring-accent' : 'border-accent text-accent hover:bg-accent/10 focus-visible:ring-accent'}`}
-        >
+        {!animal.imageUrl && (
+          <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+            <PawPrint className="h-12 w-12 text-muted-foreground" />
+          </div>
+        )}
+        
+        <div className="flex-grow text-center sm:text-left w-full">
+          <CardHeader className="p-0 mb-2">
+            <CardTitle className="text-xl font-semibold flex items-center justify-center sm:justify-start">
+              <PawPrint className="mr-2 h-5 w-5 text-primary hidden sm:inline" />
+              {animal.name}
+            </CardTitle>
+            <CardDescription className="flex items-center justify-center sm:justify-start text-sm text-muted-foreground">
+              <Tag className="mr-1 h-3 w-3" /> Species: {animal.species} {animal.commonName && `(${animal.commonName})`}
+            </CardDescription>
+            {animal.verified && verificationDate && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center sm:justify-start">
+                <Clock className="mr-1 h-3 w-3" /> Verified on: {verificationDate}
+              </p>
+            )}
+          </CardHeader>
+          
+          <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            <DetailItem icon={Milestone} label="Gender" value={animal.gender} />
+            <DetailItem icon={Fingerprint} label="Microchip" value={animal.microChip} />
+            <DetailItem icon={Disc3} label="Ring No." value={animal.ringNumber} />
+            {animal.identifierType && animal.identifierValue && (
+              <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} />
+            )}
+            <DetailItem icon={Dna} label="Breed" value={animal.breedName} />
+            <DetailItem icon={VenetianMask} label="Morph" value={animal.morphName} />
+            <DetailItem icon={WeightIcon} label="Weight" value={animal.weight} />
+            <DetailItem icon={Info} label="Age" value={animal.age} />
+            <DetailItem icon={CalendarDays} label="Accession Date" value={formatDate(animal.accessionDate)} />
+            <DetailItem icon={PackagePlus} label="Accession Type" value={animal.accessionType} />
+            <DetailItem icon={CalendarDays} label="Birth Date" value={formatDate(animal.birthDate)} />
+            <DetailItem icon={CalendarDays} label="Added on Antz" value={formatDate(animal.addedOnAntz)} />
+            {animal.csvRowNumber && (
+               <DetailItem icon={AlignLeft} label="CSV Row" value={animal.csvRowNumber} />
+            )}
+          </CardContent>
+        </div>
+
+        <div className="flex flex-col items-center sm:items-end gap-2 mt-2 sm:mt-0 flex-shrink-0">
           {animal.verified ? (
-            <><CircleOff size={18} className="mr-2" /> Unverify</>
+            <Badge variant="default" className="bg-accent text-accent-foreground select-none">
+              <CheckCircle size={16} className="mr-1" /> Verified
+            </Badge>
           ) : (
-            <><CheckCircle size={18} className="mr-2" /> Verify</>
+            <Badge variant="secondary" className="select-none">
+              <CircleOff size={16} className="mr-1" /> Not Verified
+            </Badge>
           )}
-        </Button>
+          <Button
+            onClick={() => onToggleVerify(animal.id)}
+            variant={animal.verified ? "outline" : "default"}
+            className={`w-full sm:w-auto ${!animal.verified ? 'bg-accent text-accent-foreground hover:bg-accent/90 focus-visible:ring-accent' : 'border-accent text-accent hover:bg-accent/10 focus-visible:ring-accent'}`}
+            size="sm"
+          >
+            {animal.verified ? (
+              <><CircleOff size={16} className="mr-2" /> Unverify</>
+            ) : (
+              <><CheckCircle size={16} className="mr-2" /> Verify</>
+            )}
+          </Button>
+        </div>
       </div>
     </Card>
   );
