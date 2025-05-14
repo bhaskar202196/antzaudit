@@ -2,12 +2,11 @@
 "use client";
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useCallback } from 'react';
-import type { Zoo, Site, Section, Enclosure, Animal, User } from '@/lib/types'; // Added Section
+import type { Zoo, Site, Section, Enclosure, Animal, User } from '@/lib/types';
 import { MOCK_ZOOS as INITIAL_MOCK_ZOOS } from '@/lib/data';
 import Papa from 'papaparse';
 import { generateCsvEntityId } from '@/lib/utils';
 
-// Define a type for the parsed CSV row, matching provided headers
 interface CsvRow {
   'Antz Animal Id': string;
   'Micro Chip'?: string;
@@ -17,12 +16,12 @@ interface CsvRow {
   'Gender': string;
   'Identifier Type'?: string;
   'Identifier Value'?: string;
-  'Type Of Animal': string; // e.g. "group", "single" from sample
+  'Type Of Animal': string;
   'Animal Count': string;
-  'Site/Facilty': string; // Site Name
-  'Section Name': string; // Section Name - NEW HIERARCHY LEVEL
+  'Site/Facilty': string;
+  'Section Name': string;
   'Enclosure Name': string;
-  'Organization Name': string; // Zoo Name
+  'Organization Name': string;
   'Breed Name'?: string;
   'Morph Name'?: string;
   'Weight'?: string;
@@ -35,13 +34,13 @@ interface CsvRow {
 
 interface ZooDataContextType {
   zoos: Zoo[];
-  replaceGlobalZoosFromCsv: (csvString: string, currentUser: User) => Promise<{ success: boolean; error?: string }>;
+  replaceSpecificZooDataFromCsv: (zooIdToReplace: string, csvString: string, currentUser: User) => Promise<{ success: boolean; error?: string }>;
   createZoo: (details: { name: string, city: string }, csvString: string | null, currentUser: User) => Promise<{ success: boolean; newZooId?: string; error?: string }>;
   getZooById: (zooId: string) => Zoo | undefined;
   getSiteById: (zooId: string, siteId: string) => Site | undefined;
-  getSectionById: (zooId: string, siteId: string, sectionId: string) => Section | undefined; // NEW
-  getEnclosureById: (zooId: string, siteId: string, sectionId: string, enclosureId: string) => Enclosure | undefined; // MODIFIED
-  updateAnimalVerification: (zooId: string, siteId: string, sectionId: string, enclosureId: string, animalId: string, verified: boolean, verifiedAt?: string) => void; // MODIFIED
+  getSectionById: (zooId: string, siteId: string, sectionId: string) => Section | undefined;
+  getEnclosureById: (zooId: string, siteId: string, sectionId: string, enclosureId: string) => Enclosure | undefined;
+  updateAnimalVerification: (zooId: string, siteId: string, sectionId: string, enclosureId: string, animalId: string, verified: boolean, verifiedAt?: string) => void;
   isLoading: boolean;
 }
 
@@ -54,6 +53,9 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
   const parseAndPopulateZoos = useCallback((
     csvString: string,
     currentUser: User,
+    // targetZooInit is used when creating a NEW zoo with CSV, or REPLACING an existing zoo's data.
+    // If provided, 'Organization Name' from CSV is ignored, and data populates this target.
+    // If NOT provided, it will create new zoos based on 'Organization Name' (original global replace logic).
     targetZooInit?: { id: string; name: string; city: string; userId: string; imageUrl?: string }
   ): { zoos: Zoo[]; error?: string } => {
     const results = Papa.parse<CsvRow>(csvString, {
@@ -86,8 +88,8 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
         site = {
           id: siteId,
           name: siteName,
-          location: 'N/A (from CSV Site)', // Site's general location or default
-          sections: [], // Initialize sections array
+          location: 'N/A (from CSV Site)',
+          sections: [],
           imageUrl: `https://picsum.photos/seed/${siteId}/600/400`
         };
         zooToPopulate.sites.push(site);
@@ -117,7 +119,7 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
       }
       let enclosure = section.enclosures.find(e => e.name === enclosureName);
       if (!enclosure) {
-        const enclosureId = generateCsvEntityId(enclosureName, 'enc', section.id); // Parent is now section.id
+        const enclosureId = generateCsvEntityId(enclosureName, 'enc', section.id);
         enclosure = {
           id: enclosureId,
           name: enclosureName,
@@ -145,77 +147,67 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
         birthDate: row['Birth Date'],
         addedOnAntz: row['Added On Antz'],
         commonName: row['Common Name'],
-        imageUrl: `https://picsum.photos/seed/animal${animalIdFromCsv.replace(/[^a-zA-Z0-9]/g, '')}/100/100`, // Sanitize ID for URL
+        imageUrl: `https://picsum.photos/seed/animal${animalIdFromCsv.replace(/[^a-zA-Z0-9]/g, '')}/100/100`,
         csvRowNumber: index + 2,
       };
 
       const animalCountStr = row['Animal Count']?.trim();
-      let countFromCsv = 1; // Default interpretation: if field is missing, empty, or invalid, assume 1 for creation.
-
+      let countFromCsv = 1; 
       if (animalCountStr && animalCountStr !== "") {
         const parsedNum = parseInt(animalCountStr, 10);
         if (!isNaN(parsedNum)) {
-          countFromCsv = parsedNum; // Actual number from CSV
+          countFromCsv = parsedNum;
         }
-        // If parsing fails (e.g., "text" in Animal Count), countFromCsv remains 1.
       }
-      
-      // New interpretation: create 1 app animal if CSV count > 0, else 0.
       const numAnimalsToGenerateInApp = countFromCsv > 0 ? 1 : 0;
 
-      if (numAnimalsToGenerateInApp === 0) {
-        console.log(`CSV Animal Count is ${countFromCsv} for Antz Animal Id ${animalIdFromCsv} (Row ${index + 2}). Interpreted as 0, so no animal instances created for this CSV line.`);
-      } else { // numAnimalsToGenerateInApp is 1
-        // The loop for (let i = 0; i < numAnimalsToGenerateInApp; i++) will run exactly once.
-        const i = 0; // 'i' will be 0 as loop runs once.
-        const idNamePart = animalIdFromCsv; // Using Antz Animal Id directly for naming part.
-        
-        // generateCsvEntityId includes a random suffix, ensuring unique IDs even if idNamePart, enclosure.id, and i were identical across calls.
-        const animalInstanceId = generateCsvEntityId(idNamePart, 'animal', enclosure.id, i);
-        
+      if (numAnimalsToGenerateInApp > 0) {
+        const animalInstanceId = generateCsvEntityId(animalIdFromCsv, 'animal', enclosure.id, 0);
         const animalInstance: Animal = {
           ...animalBase,
           id: animalInstanceId,
-          name: `${row['Common Name'] || 'Animal'} (${idNamePart})`, // Name reflects the Antz Animal ID.
+          name: `${row['Common Name'] || 'Animal'} (${animalIdFromCsv})`,
         };
         enclosure.animals.push(animalInstance);
       }
     };
 
-
     if (targetZooInit) {
+      // Populate a specific zoo (either new or replacing an existing one)
       const populatedZoo: Zoo = {
         id: targetZooInit.id,
         name: targetZooInit.name,
         city: targetZooInit.city,
         userId: targetZooInit.userId,
-        sites: [],
+        sites: [], // CRITICAL: Start with empty sites to ensure replacement
         imageUrl: targetZooInit.imageUrl || `https://picsum.photos/seed/${targetZooInit.id}/600/400`,
       };
+      // 'Organization Name' from CSV is ignored here, data populates 'populatedZoo'
       parsedData.forEach((row, index) => processRowData(row, index, populatedZoo));
       return { zoos: [populatedZoo] };
     } else {
-      // Global CSV processing: creates zoos based on 'Organization Name'
+      // This is the old global replace logic, will not be hit by UI anymore but kept for potential future use.
+      // Creates new zoos based on 'Organization Name' in the CSV.
       const zoosMap = new Map<string, Zoo>();
       parsedData.forEach((row, index) => {
-        const zooName = row['Organization Name'];
-        if (!zooName) {
-          console.warn(`Skipping row ${index + 2} due to missing Organization Name.`);
+        const zooNameFromCsv = row['Organization Name'];
+        if (!zooNameFromCsv) {
+          console.warn(`Skipping row ${index + 2} due to missing Organization Name (in global mode).`);
           return;
         }
         
-        let zoo = zoosMap.get(zooName);
+        let zoo = zoosMap.get(zooNameFromCsv);
         if (!zoo) {
-          const zooId = generateCsvEntityId(zooName, 'zoo');
+          const zooId = generateCsvEntityId(zooNameFromCsv, 'zoo');
           zoo = {
             id: zooId,
-            name: zooName,
+            name: zooNameFromCsv,
             city: 'N/A (from CSV)',
             userId: currentUser.id,
             sites: [],
             imageUrl: `https://picsum.photos/seed/${zooId}/600/400`
           };
-          zoosMap.set(zooName, zoo);
+          zoosMap.set(zooNameFromCsv, zoo);
         }
         processRowData(row, index, zoo);
       });
@@ -224,28 +216,50 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
 
-  const replaceGlobalZoosFromCsv = useCallback(async (csvString: string, currentUser: User): Promise<{ success: boolean; error?: string }> => {
+  const replaceSpecificZooDataFromCsv = useCallback(async (
+    zooIdToReplace: string, 
+    csvString: string, 
+    currentUser: User
+  ): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     return new Promise(resolve => {
       setTimeout(() => { 
         try {
-          const { zoos: parsedZoos, error: parseError } = parseAndPopulateZoos(csvString, currentUser);
-          if (parseError) {
+          const zooToReplace = zoos.find(z => z.id === zooIdToReplace);
+          if (!zooToReplace) {
             setIsLoading(false);
-            resolve({ success: false, error: parseError });
+            resolve({ success: false, error: "Zoo to replace not found." });
             return;
           }
-          setZoos(parsedZoos); // Replace all existing data
+
+          // Pass current zoo details to parseAndPopulateZoos for targeted replacement
+          const { zoos: populatedZoos, error: parseError } = parseAndPopulateZoos(csvString, currentUser, {
+            id: zooToReplace.id,
+            name: zooToReplace.name, // Keep original name
+            city: zooToReplace.city, // Keep original city
+            userId: zooToReplace.userId, // Keep original user
+            imageUrl: zooToReplace.imageUrl, // Keep original image
+          });
+
+          if (parseError || populatedZoos.length === 0) {
+            setIsLoading(false);
+            resolve({ success: false, error: parseError || "CSV processing led to no data for this zoo." });
+            return;
+          }
+          
+          const updatedZooData = populatedZoos[0]; // Should be the single, re-populated zoo
+
+          setZoos(prevZoos => prevZoos.map(z => z.id === zooIdToReplace ? updatedZooData : z));
           setIsLoading(false);
           resolve({ success: true });
         } catch (e: any) {
           setIsLoading(false);
-          console.error("Error in replaceGlobalZoosFromCsv: ", e);
-          resolve({ success: false, error: e.message || "Failed to parse or process CSV data" });
+          console.error("Error in replaceSpecificZooDataFromCsv: ", e);
+          resolve({ success: false, error: e.message || "Failed to parse or process CSV data for the specific zoo" });
         }
       }, 50);
     });
-  }, [parseAndPopulateZoos]);
+  }, [zoos, parseAndPopulateZoos]);
 
   const createZoo = useCallback(async (
     details: { name: string, city: string },
@@ -260,11 +274,13 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
           let newZoo: Zoo;
 
           if (csvString) {
+            // Use parseAndPopulateZoos with targetZooInit for the new zoo
             const { zoos: populatedZoos, error: parseError } = parseAndPopulateZoos(csvString, currentUser, {
               id: newZooId,
               name: details.name,
               city: details.city,
               userId: currentUser.id,
+              // imageUrl will be generated by parseAndPopulateZoos if not specified here
             });
             if (parseError || populatedZoos.length === 0) {
               setIsLoading(false);
@@ -278,7 +294,7 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
               name: details.name,
               city: details.city,
               userId: currentUser.id,
-              sites: [], // Initialize with empty sites array
+              sites: [],
               imageUrl: `https://picsum.photos/seed/${newZooId}/600/400`,
             };
           }
@@ -306,17 +322,17 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
     return zoo?.sites.find(site => site.id === siteId);
   }, [getZooById]);
 
-  const getSectionById = useCallback((zooId: string, siteId: string, sectionId: string): Section | undefined => { // NEW
+  const getSectionById = useCallback((zooId: string, siteId: string, sectionId: string): Section | undefined => {
     const site = getSiteById(zooId, siteId);
     return site?.sections.find(section => section.id === sectionId);
   }, [getSiteById]);
 
-  const getEnclosureById = useCallback((zooId: string, siteId: string, sectionId: string, enclosureId: string): Enclosure | undefined => { // MODIFIED
+  const getEnclosureById = useCallback((zooId: string, siteId: string, sectionId: string, enclosureId: string): Enclosure | undefined => {
     const section = getSectionById(zooId, siteId, sectionId);
     return section?.enclosures.find(enclosure => enclosure.id === enclosureId);
   }, [getSectionById]);
 
-  const updateAnimalVerification = useCallback((zooId: string, siteId: string, sectionId: string, enclosureId: string, animalId: string, verified: boolean, verifiedAt?: string) => { // MODIFIED
+  const updateAnimalVerification = useCallback((zooId: string, siteId: string, sectionId: string, enclosureId: string, animalId: string, verified: boolean, verifiedAt?: string) => {
     setZoos(prevZoos => {
       return prevZoos.map(zoo => {
         if (zoo.id === zooId) {
@@ -326,7 +342,7 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
               if (site.id === siteId) {
                 return {
                   ...site,
-                  sections: site.sections.map(currentSection => { // Iterate through sections
+                  sections: site.sections.map(currentSection => {
                     if (currentSection.id === sectionId) {
                       return {
                         ...currentSection,
@@ -361,11 +377,11 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
 
   const value = { 
     zoos, 
-    replaceGlobalZoosFromCsv,
+    replaceSpecificZooDataFromCsv,
     createZoo,
     getZooById, 
     getSiteById, 
-    getSectionById, // Add new getter
+    getSectionById,
     getEnclosureById, 
     updateAnimalVerification, 
     isLoading 
@@ -385,4 +401,3 @@ export const useZooData = () => {
   }
   return context;
 };
-

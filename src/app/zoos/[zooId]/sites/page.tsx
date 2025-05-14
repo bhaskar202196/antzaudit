@@ -3,15 +3,18 @@
 "use client";
 import type { Site, Zoo } from '@/lib/types'; 
 import SiteCard from '@/components/zoo/site-card';
-import { use, useEffect, useState, useCallback } from 'react';
+import { use, useEffect, useState, useCallback, type ChangeEvent } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
 import { useZooData } from '@/contexts/zoo-data-context'; 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, Download } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Download, UploadCloud, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
+import CsvUpload from '@/components/csv/csv-upload';
+import { useAuth } from '@/hooks/use-auth';
+
 
 interface ZooSitesPageProps {
   params: Promise<{ zooId: string }>;
@@ -75,10 +78,15 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
   const params = use(paramsPromise);
   const { zooId } = params;
 
-  const { getZooById: getZooByIdFromContext, isLoading: isZooDataLoading } = useZooData(); 
+  const { getZooById: getZooByIdFromContext, isLoading: isZooDataLoading, replaceSpecificZooDataFromCsv } = useZooData(); 
   const [zoo, setZoo] = useState<Zoo | null | undefined>(null); 
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const [selectedZooCsvFile, setSelectedZooCsvFile] = useState<File | null>(null);
+  const [isProcessingZooCsv, setIsProcessingZooCsv] = useState(false);
+
 
   useEffect(() => {
     const currentZoo = getZooByIdFromContext(zooId);
@@ -109,7 +117,6 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       setTimeout(() => {
       toast({ title: "No Data", description: `No animal data found in ${zoo.name} to export.`, variant: "default", className: "bg-secondary text-secondary-foreground" });
       },0);
-      // No return here, still proceed to download empty CSV if user wants it
     }
     
     try {
@@ -123,7 +130,7 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      if (hasData) { // Only show success if there was data
+      if (hasData) {
         setTimeout(() => {
         toast({ title: "Export Successful", description: `All data for ${zoo.name} has been downloaded.` });
         },0);
@@ -136,7 +143,53 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
     }
   }, [zoo, toast]);
 
-  if (isZooDataLoading || zoo === null) { 
+  const handleZooFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedZooCsvFile(event.target.files[0]);
+    } else {
+      setSelectedZooCsvFile(null);
+    }
+     if (!event.target.files || event.target.files.length === 0) {
+         event.target.value = ''; 
+    }
+  };
+
+  const handleZooCsvUpload = async () => {
+    if (!selectedZooCsvFile) {
+      toast({ title: "Upload Error", description: "Please select a CSV file.", variant: "destructive" });
+      return;
+    }
+    if (!user) {
+      toast({ title: "Authentication Error", description: "You must be logged in to upload data.", variant: "destructive" });
+      return;
+    }
+    if (!zoo) {
+      toast({ title: "Zoo Error", description: "Zoo data not available for replacement.", variant: "destructive" });
+      return;
+    }
+
+    setIsProcessingZooCsv(true);
+    
+    try {
+      const csvString = await selectedZooCsvFile.text();
+      const { success, error } = await replaceSpecificZooDataFromCsv(zoo.id, csvString, user);
+
+      if (success) {
+        toast({ title: "Zoo Data Replaced", description: `Data for ${zoo.name} has been replaced by the CSV content.` });
+        setSelectedZooCsvFile(null); 
+        const fileInput = document.getElementById('specificZooCsvUpload') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+      } else {
+        toast({ title: "CSV Processing Failed", description: error || "An unknown error occurred.", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "File Read Error", description: "Could not read the selected file.", variant: "destructive" });
+    } finally {
+      setIsProcessingZooCsv(false);
+    }
+  };
+
+  if (isZooDataLoading || zoo === null || isProcessingZooCsv) { 
     return (
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -145,6 +198,15 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
         </div>
         <Skeleton className="h-10 w-1/2 mb-2" />
         <Skeleton className="h-8 w-1/3 mb-8" />
+         {/* Specific Zoo CSV Upload Section Skeleton */}
+        <div className="p-4 border rounded-lg shadow-sm bg-card my-6">
+          <Skeleton className="h-6 w-1/2 mb-3" />
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <Skeleton className="h-10 flex-grow w-full sm:w-auto" />
+            <Skeleton className="h-10 w-full sm:w-40" />
+          </div>
+          <Skeleton className="h-4 w-3/4 mt-3" />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => (
             <Card key={i} className="flex flex-col">
@@ -196,9 +258,41 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       </div>
       <h1 className="text-4xl font-bold mb-2 tracking-tight text-gray-800">{zoo.name}</h1>
       <p className="text-xl text-muted-foreground mb-8">Sites within this Zoo</p>
+
+      {/* Specific Zoo CSV Upload Section */}
+      <div className="p-4 border rounded-lg shadow-sm bg-card my-8">
+        <h3 className="text-lg font-semibold mb-3 text-card-foreground flex items-center">
+          <UploadCloud className="mr-2 h-5 w-5 text-primary" />
+          Replace Data for {zoo.name} via CSV
+        </h3>
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="flex-grow w-full sm:w-auto">
+            <CsvUpload
+              selectedFile={selectedZooCsvFile}
+              onFileChange={handleZooFileChange}
+              instanceId="specificZooCsvUpload"
+              disabled={isProcessingZooCsv || isZooDataLoading}
+              label={`Select CSV to replace data for ${zoo.name}`}
+            />
+          </div>
+          <Button 
+            onClick={handleZooCsvUpload} 
+            disabled={!selectedZooCsvFile || isProcessingZooCsv || isZooDataLoading} 
+            className="w-full sm:w-auto"
+          >
+            {isProcessingZooCsv ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : <UploadCloud size={18} className="mr-2"/>}
+            {isProcessingZooCsv ? 'Processing...' : (selectedZooCsvFile ? `Process ${selectedZooCsvFile.name.substring(0,15)}...` : 'Upload & Replace')}
+          </Button>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Warning: Uploading a CSV here will replace all existing sites, sections, enclosures, and animals for <strong>{zoo.name}</strong> with the content from this file. The zoo's name and city will remain unchanged.
+        </p>
+      </div>
       
       {zoo.sites.length === 0 ? (
-        <p className="text-lg text-muted-foreground">This zoo has no sites configured yet.</p>
+        <p className="text-lg text-muted-foreground">This zoo has no sites configured yet. You can add them by uploading a CSV above.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
           {zoo.sites.map(site => (
