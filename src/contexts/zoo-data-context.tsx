@@ -150,39 +150,35 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
       };
 
       const animalCountStr = row['Animal Count']?.trim();
-      let numAnimalsToCreate = 1; // Default to 1 if Animal Count is missing, empty, or invalid
+      let countFromCsv = 1; // Default interpretation: if field is missing, empty, or invalid, assume 1 for creation.
 
       if (animalCountStr && animalCountStr !== "") {
-        const parsedCount = parseInt(animalCountStr, 10);
-        if (!isNaN(parsedCount)) {
-          if (parsedCount === 0) {
-            numAnimalsToCreate = 0;
-          } else if (parsedCount > 0) {
-            numAnimalsToCreate = parsedCount;
-          }
-          // If parsedCount is &lt; 0, it will fall through and numAnimalsToCreate remains 1 (default).
+        const parsedNum = parseInt(animalCountStr, 10);
+        if (!isNaN(parsedNum)) {
+          countFromCsv = parsedNum; // Actual number from CSV
         }
-        // If parsing fails (e.g., "text"), numAnimalsToCreate remains 1 (default).
+        // If parsing fails (e.g., "text" in Animal Count), countFromCsv remains 1.
       }
-      // If animalCountStr is undefined or empty, numAnimalsToCreate remains 1 (default).
+      
+      // New interpretation: create 1 app animal if CSV count > 0, else 0.
+      const numAnimalsToGenerateInApp = countFromCsv > 0 ? 1 : 0;
 
-      if (numAnimalsToCreate === 0) {
-        console.log(`Animal Count is 0 for Antz Animal Id ${animalIdFromCsv} (CSV Row ${index + 2}). No animals created for this entry.`);
-      } else {
-        for (let i = 0; i < numAnimalsToCreate; i++) {
-          // Suffix is only added if we are creating more than one animal from THIS specific CSV row.
-          const uniqueInstanceSuffix = numAnimalsToCreate > 1 ? `-instance-${i + 1}` : '';
-          const idNamePart = `${animalIdFromCsv}${uniqueInstanceSuffix}`;
-          
-          const animalInstanceId = generateCsvEntityId(idNamePart, 'animal', enclosure.id, i);
-          
-          const animalInstance: Animal = {
-            ...animalBase,
-            id: animalInstanceId,
-            name: `${row['Common Name'] || 'Animal'} (${idNamePart})`, // Name also reflects instance
-          };
-          enclosure.animals.push(animalInstance);
-        }
+      if (numAnimalsToGenerateInApp === 0) {
+        console.log(`CSV Animal Count is ${countFromCsv} for Antz Animal Id ${animalIdFromCsv} (Row ${index + 2}). Interpreted as 0, so no animal instances created for this CSV line.`);
+      } else { // numAnimalsToGenerateInApp is 1
+        // The loop for (let i = 0; i < numAnimalsToGenerateInApp; i++) will run exactly once.
+        const i = 0; // 'i' will be 0 as loop runs once.
+        const idNamePart = animalIdFromCsv; // Using Antz Animal Id directly for naming part.
+        
+        // generateCsvEntityId includes a random suffix, ensuring unique IDs even if idNamePart, enclosure.id, and i were identical across calls.
+        const animalInstanceId = generateCsvEntityId(idNamePart, 'animal', enclosure.id, i);
+        
+        const animalInstance: Animal = {
+          ...animalBase,
+          id: animalInstanceId,
+          name: `${row['Common Name'] || 'Animal'} (${idNamePart})`, // Name reflects the Antz Animal ID.
+        };
+        enclosure.animals.push(animalInstance);
       }
     };
 
@@ -389,3 +385,4 @@ export const useZooData = () => {
   }
   return context;
 };
+
