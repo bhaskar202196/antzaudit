@@ -1,7 +1,7 @@
 
 // src/app/zoos/[zooId]/sites/[siteId]/sections/[sectionId]/enclosures/[enclosureId]/animals/page.tsx
 "use client";
-import type { Animal, Enclosure, Section, Site, Zoo } from '@/lib/types'; // Added Section
+import type { Animal, Enclosure, Section, Site, Zoo, User } from '@/lib/types'; // Added Section, User
 import AnimalListItem from '@/components/zoo/animal-list-item';
 import { use, useEffect, useState, useCallback } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
@@ -11,14 +11,16 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertTriangle, Download } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 
 interface AnimalVerificationPageProps {
   params: Promise<{ zooId: string; siteId: string; sectionId: string; enclosureId: string }>; // Added sectionId
 }
 
 // Helper function to convert animal data to CSV format
-const convertAnimalsToCSV = (animals: Animal[], enclosureName: string): string => {
-  const headers = ['ID', 'Name', 'Species', 'Common Name', 'Gender', 'Verified', 'Verified At', 
+const convertAnimalsToCSV = (animals: Animal[], enclosureName: string, currentUser: User | null): string => {
+  const headers = ['ID', 'Name', 'Species', 'Common Name', 'Gender', 
+                   'Verified', 'Verified At', 'Who Verified', // Added 'Who Verified'
                    'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue', 
                    'BreedName', 'MorphName', 'Weight', 'Age', 
                    'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row'];
@@ -26,6 +28,7 @@ const convertAnimalsToCSV = (animals: Animal[], enclosureName: string): string =
     animal.id, animal.name, animal.species, animal.commonName, animal.gender,
     animal.verified ? 'Yes' : 'No',
     animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : '',
+    animal.verified && currentUser ? currentUser.email : '', // Populate 'Who Verified'
     animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
     animal.breedName, animal.morphName, animal.weight, animal.age,
     animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber
@@ -61,6 +64,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
     updateAnimalVerification, 
     isLoading: isZooDataLoading 
   } = useZooData();
+  const { user } = useAuth(); // Get current user
 
   const [zoo, setZoo] = useState<Zoo | null | undefined>(null);
   const [site, setSite] = useState<Site | null | undefined>(null);
@@ -158,7 +162,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
       return;
     }
     try {
-      const csvData = convertAnimalsToCSV(enclosure.animals, enclosure.name);
+      const csvData = convertAnimalsToCSV(enclosure.animals, enclosure.name, user); // Pass user to CSV function
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -178,7 +182,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
         toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
       },0);
     }
-  }, [enclosure, toast]);
+  }, [enclosure, toast, user]); // Add user to dependencies
   
   if (isZooDataLoading || zoo === null || (zoo && site === null) || (zoo && site && section === null) || (zoo && site && section && enclosure === null) ) { 
     return (
