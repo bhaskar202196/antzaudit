@@ -3,12 +3,13 @@
 "use client";
 import type { Animal, Enclosure, Section, Site, Zoo, User } from '@/lib/types'; // Added Section, User
 import AnimalListItem from '@/components/zoo/animal-list-item';
+import AnimalTable from '@/components/zoo/animal-table'; // Import the new table component
 import { use, useEffect, useState, useCallback } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
 import { useZooData } from '@/contexts/zoo-data-context'; 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, Download } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List } from 'lucide-react'; // Added LayoutGrid and List icons
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
@@ -16,6 +17,8 @@ import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 interface AnimalVerificationPageProps {
   params: Promise<{ zooId: string; siteId: string; sectionId: string; enclosureId: string }>; // Added sectionId
 }
+
+type ViewMode = 'card' | 'table';
 
 // Helper function to convert animal data to CSV format
 const convertAnimalsToCSV = (animals: Animal[], enclosureName: string, currentUser: User | null): string => {
@@ -70,6 +73,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
   const [site, setSite] = useState<Site | null | undefined>(null);
   const [section, setSection] = useState<Section | null | undefined>(null); // Added section state
   const [enclosure, setEnclosure] = useState<Enclosure | null | undefined>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('card'); // State for view mode
   
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
@@ -226,11 +230,29 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Enclosures in {section.name}
           </Link>
         </Button>
-        {animals.length > 0 && (
-          <Button variant="outline" onClick={handleExportCSV}>
-            <Download className="mr-2 h-4 w-4" /> Export to CSV
+        <div className="flex items-center gap-2">
+          {animals.length > 0 && (
+            <Button variant="outline" onClick={handleExportCSV}>
+              <Download className="mr-2 h-4 w-4" /> Export to CSV
+            </Button>
+          )}
+           <Button 
+            variant={viewMode === 'card' ? 'secondary' : 'outline'} 
+            onClick={() => setViewMode('card')}
+            size="icon"
+            aria-label="Card View"
+          >
+            <LayoutGrid className="h-4 w-4" />
           </Button>
-        )}
+          <Button 
+            variant={viewMode === 'table' ? 'secondary' : 'outline'} 
+            onClick={() => setViewMode('table')}
+            size="icon"
+            aria-label="Table View"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <h1 className="text-4xl font-bold mb-2 tracking-tight text-gray-800">{enclosure.name}</h1>
@@ -238,12 +260,14 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
       
       {animals.length === 0 ? (
         <p className="text-lg text-muted-foreground">This enclosure has no animals listed for verification.</p>
-      ) : (
+      ) : viewMode === 'card' ? (
         <div className="space-y-4">
           {animals.map(animal => (
             <AnimalListItem key={animal.id} animal={animal} onToggleVerify={handleToggleVerify} />
           ))}
         </div>
+      ) : (
+        <AnimalTable animals={animals} onToggleVerify={handleToggleVerify} />
       )}
     </div>
   );
