@@ -27,13 +27,14 @@ const convertZooDataToCSV = (zoo: Zoo): { csv: string; hasData: boolean } => {
     'Site ID', 'Site Name', 'Site Location',
     'Section ID', 'Section Name', 
     'Enclosure ID', 'Enclosure Name', 'Enclosure Type',
-    'Animal ID', 'Animal Name', 'Animal Species', 'Common Name', 'Gender', 'Verified', 'Verified At',
+    'Animal ID', 'Animal Name', 'Animal Species', 'Common Name', 'Gender', 
+    'Verified', 'Verified At', 'Who Verified', // Added 'Who Verified'
     'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue',
     'BreedName', 'MorphName', 'Weight', 'Age',
     'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row'
   ];
 
-  const rows: (string | number | boolean | undefined)[][] = [];
+  const rows: (string | number | boolean | undefined | null)[][] = [];
 
   zoo.sites.forEach(site => {
     site.sections.forEach(section => { 
@@ -47,6 +48,7 @@ const convertZooDataToCSV = (zoo: Zoo): { csv: string; hasData: boolean } => {
             animal.id, animal.name, animal.species, animal.commonName, animal.gender,
             animal.verified ? 'Yes' : 'No',
             animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : '',
+            '', // Placeholder for 'Who Verified' as this data is not tracked
             animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
             animal.breedName, animal.morphName, animal.weight, animal.age,
             animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber
@@ -117,22 +119,39 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       setTimeout(() => {
       toast({ title: "No Data", description: `No animal data found in ${zoo.name} to export.`, variant: "default", className: "bg-secondary text-secondary-foreground" });
       },0);
+      // Do not return here if you want to download an empty CSV with headers
     }
     
     try {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}`;
+      
+      const fileName = `${zoo.name.replace(/\s+/g, '_')}_${zoo.city.replace(/\s+/g, '_')}_data_export_${timestamp}.csv`;
+
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `${zoo.name.replace(/\s+/g, '_')}_data_export.csv`);
+      link.setAttribute('download', fileName);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      
       if (hasData) {
         setTimeout(() => {
-        toast({ title: "Export Successful", description: `All data for ${zoo.name} has been downloaded.` });
+        toast({ title: "Export Successful", description: `All data for ${zoo.name} has been downloaded as ${fileName}.` });
+        },0);
+      } else {
+         setTimeout(() => {
+        toast({ title: "Export Note", description: `An empty CSV template for ${zoo.name} has been downloaded as ${fileName}.` });
         },0);
       }
     } catch (error) {
@@ -303,3 +322,4 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
     </div>
   );
 }
+
