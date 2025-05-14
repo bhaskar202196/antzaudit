@@ -15,10 +15,10 @@ interface AnimalListItemProps {
   onToggleVerify: (animalId: string) => void;
 }
 
-const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: string | number | null }> = ({ icon: Icon, label, value }) => {
-  if (!value && typeof value !== 'number') return null;
+const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: string | number | null, fullWidth?: boolean }> = ({ icon: Icon, label, value, fullWidth = false }) => {
+  if (!value && typeof value !== 'number') return null; // Also check for empty string for value
   return (
-    <div className="flex items-center text-xs text-muted-foreground">
+    <div className={`flex items-center text-xs text-muted-foreground ${fullWidth ? 'md:col-span-2' : ''}`}>
       <Icon className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
       <span className="font-medium">{label}:</span>&nbsp;
       <span className="truncate" title={String(value)}>{String(value)}</span>
@@ -69,18 +69,18 @@ export default function AnimalListItem({ animal, onToggleVerify }: AnimalListIte
             <CardDescription className="text-sm text-muted-foreground space-y-0.5 mt-1">
               <div className="flex items-center justify-center sm:justify-start">
                 <Tag className="mr-1 h-3.5 w-3.5 flex-shrink-0" /> 
-                <span className="font-medium">Species:</span>&nbsp;{animal.species} {animal.commonName && `(${animal.commonName})`}
+                <span className="font-semibold">Species:</span>&nbsp;{animal.species} {animal.commonName && `(${animal.commonName})`}
               </div>
               {animal.microChip && (
                 <div className="flex items-center justify-center sm:justify-start">
                   <Fingerprint className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
-                  <span className="font-medium">Microchip:</span>&nbsp;{animal.microChip}
+                  <span className="font-semibold">Microchip:</span>&nbsp;{animal.microChip}
                 </div>
               )}
               {animal.ringNumber && (
                 <div className="flex items-center justify-center sm:justify-start">
                   <Disc3 className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
-                  <span className="font-medium">Ring No.:</span>&nbsp;{animal.ringNumber}
+                  <span className="font-semibold">Ring No.:</span>&nbsp;{animal.ringNumber}
                 </div>
               )}
             </CardDescription>
@@ -94,7 +94,7 @@ export default function AnimalListItem({ animal, onToggleVerify }: AnimalListIte
           <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-3">
             <DetailItem icon={Milestone} label="Gender" value={animal.gender} />
             {animal.identifierType && animal.identifierValue && (
-              <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} />
+              <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} fullWidth />
             )}
             <DetailItem icon={Dna} label="Breed" value={animal.breedName} />
             <DetailItem icon={VenetianMask} label="Morph" value={animal.morphName} />
@@ -134,3 +134,4 @@ export default function AnimalListItem({ animal, onToggleVerify }: AnimalListIte
     </Card>
   );
 }
+
