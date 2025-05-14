@@ -1,3 +1,4 @@
+
 // src/app/zoos/[zooId]/sites/page.tsx
 "use client";
 import type { Site, Zoo } from '@/lib/types'; 
@@ -21,7 +22,7 @@ const convertZooDataToCSV = (zoo: Zoo): { csv: string; hasData: boolean } => {
   const headers = [
     'Zoo ID', 'Zoo Name', 'Zoo City',
     'Site ID', 'Site Name', 'Site Location',
-    'Section ID', 'Section Name', // Added Section ID and Name
+    'Section ID', 'Section Name', 
     'Enclosure ID', 'Enclosure Name', 'Enclosure Type',
     'Animal ID', 'Animal Name', 'Animal Species', 'Common Name', 'Gender', 'Verified', 'Verified At',
     'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue',
@@ -32,13 +33,13 @@ const convertZooDataToCSV = (zoo: Zoo): { csv: string; hasData: boolean } => {
   const rows: (string | number | boolean | undefined)[][] = [];
 
   zoo.sites.forEach(site => {
-    site.sections.forEach(section => { // Iterate through sections
+    site.sections.forEach(section => { 
       section.enclosures.forEach(enclosure => {
         enclosure.animals.forEach(animal => {
           rows.push([
             zoo.id, zoo.name, zoo.city,
             site.id, site.name, site.location,
-            section.id, section.name, // Add section data
+            section.id, section.name, 
             enclosure.id, enclosure.name, enclosure.type,
             animal.id, animal.name, animal.species, animal.commonName, animal.gender,
             animal.verified ? 'Yes' : 'No',
@@ -108,6 +109,7 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       setTimeout(() => {
       toast({ title: "No Data", description: `No animal data found in ${zoo.name} to export.`, variant: "default", className: "bg-secondary text-secondary-foreground" });
       },0);
+      // No return here, still proceed to download empty CSV if user wants it
     }
     
     try {
@@ -121,9 +123,11 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      setTimeout(() => {
-      toast({ title: "Export Successful", description: `All data for ${zoo.name} has been downloaded.` });
-      },0);
+      if (hasData) { // Only show success if there was data
+        setTimeout(() => {
+        toast({ title: "Export Successful", description: `All data for ${zoo.name} has been downloaded.` });
+        },0);
+      }
     } catch (error) {
       console.error("Failed to export Zoo CSV:", error);
       setTimeout(() => {

@@ -1,3 +1,4 @@
+
 // src/app/zoos/[zooId]/sites/[siteId]/sections/[sectionId]/enclosures/[enclosureId]/animals/page.tsx
 "use client";
 import type { Animal, Enclosure, Section, Site, Zoo } from '@/lib/types'; // Added Section
