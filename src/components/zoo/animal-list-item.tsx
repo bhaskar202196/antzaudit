@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { 
   PawPrint, CheckCircle, CircleOff, Tag, Clock, Disc3, Fingerprint, Milestone, 
-  Scale, CalendarDays, BadgeHelp, PackagePlus, Info, WeightIcon, VenetianMask, Dna, AlignLeft
+  Scale, CalendarDays, BadgeHelp, PackagePlus, Info, WeightIcon, VenetianMask, Dna
 } from 'lucide-react'; 
 import { Badge } from '@/components/ui/badge';
 
@@ -66,20 +66,33 @@ export default function AnimalListItem({ animal, onToggleVerify }: AnimalListIte
               <PawPrint className="mr-2 h-5 w-5 text-primary hidden sm:inline" />
               {animal.name}
             </CardTitle>
-            <CardDescription className="flex items-center justify-center sm:justify-start text-sm text-muted-foreground">
-              <Tag className="mr-1 h-3 w-3" /> Species: {animal.species} {animal.commonName && `(${animal.commonName})`}
+            <CardDescription className="text-sm text-muted-foreground space-y-0.5 mt-1">
+              <div className="flex items-center justify-center sm:justify-start">
+                <Tag className="mr-1 h-3.5 w-3.5 flex-shrink-0" /> 
+                <span className="font-medium">Species:</span>&nbsp;{animal.species} {animal.commonName && `(${animal.commonName})`}
+              </div>
+              {animal.microChip && (
+                <div className="flex items-center justify-center sm:justify-start">
+                  <Fingerprint className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="font-medium">Microchip:</span>&nbsp;{animal.microChip}
+                </div>
+              )}
+              {animal.ringNumber && (
+                <div className="flex items-center justify-center sm:justify-start">
+                  <Disc3 className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="font-medium">Ring No.:</span>&nbsp;{animal.ringNumber}
+                </div>
+              )}
             </CardDescription>
             {animal.verified && verificationDate && (
-              <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center sm:justify-start">
+              <p className="text-xs text-muted-foreground mt-1.5 flex items-center justify-center sm:justify-start">
                 <Clock className="mr-1 h-3 w-3" /> Verified on: {verificationDate}
               </p>
             )}
           </CardHeader>
           
-          <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+          <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-3">
             <DetailItem icon={Milestone} label="Gender" value={animal.gender} />
-            <DetailItem icon={Fingerprint} label="Microchip" value={animal.microChip} />
-            <DetailItem icon={Disc3} label="Ring No." value={animal.ringNumber} />
             {animal.identifierType && animal.identifierValue && (
               <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} />
             )}
@@ -91,9 +104,6 @@ export default function AnimalListItem({ animal, onToggleVerify }: AnimalListIte
             <DetailItem icon={PackagePlus} label="Accession Type" value={animal.accessionType} />
             <DetailItem icon={CalendarDays} label="Birth Date" value={formatDate(animal.birthDate)} />
             <DetailItem icon={CalendarDays} label="Added on Antz" value={formatDate(animal.addedOnAntz)} />
-            {animal.csvRowNumber && (
-               <DetailItem icon={AlignLeft} label="CSV Row" value={animal.csvRowNumber} />
-            )}
           </CardContent>
         </div>
 
