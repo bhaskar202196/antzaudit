@@ -88,6 +88,8 @@ export default function ZooReportPage({ params: paramsPromise }: ZooReportPagePr
     );
   }
 
+  const defaultSiteAccordionValues = zoo.sites.map(site => `site-${site.id}`);
+
   return (
     <div className="animate-fadeIn space-y-8">
       <Button asChild variant="outline">
@@ -101,7 +103,7 @@ export default function ZooReportPage({ params: paramsPromise }: ZooReportPagePr
           <ListChecks className="mr-3 h-10 w-10 text-primary" />
           Audit Report for {zoo.name}
         </h1>
-        <p className="text-xl text-muted-foreground mt-1">Summary of animal verification status by enclosure. Click on sites and sections to expand.</p>
+        <p className="text-xl text-muted-foreground mt-1">Summary of animal verification status by enclosure. All sites and sections are initially expanded.</p>
       </header>
 
       {zoo.sites.length === 0 ? (
@@ -114,73 +116,77 @@ export default function ZooReportPage({ params: paramsPromise }: ZooReportPagePr
           </CardContent>
         </Card>
       ) : (
-        <Accordion type="multiple" className="w-full space-y-4">
-          {zoo.sites.map(site => (
-            <AccordionItem key={site.id} value={`site-${site.id}`} className="border rounded-lg shadow-md bg-card">
-              <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                <h2 className="text-2xl font-semibold flex items-center text-primary">
-                  <Building className="mr-3 h-6 w-6" />
-                  Site: {site.name}
-                </h2>
-              </AccordionTrigger>
-              <AccordionContent className="px-6 pb-6 pt-2">
-                {site.sections.length === 0 ? (
-                  <p className="text-muted-foreground">This site has no sections.</p>
-                ) : (
-                  <Accordion type="multiple" className="w-full space-y-3">
-                    {site.sections.map(section => (
-                      <AccordionItem key={section.id} value={`section-${section.id}`} className="border rounded-md bg-background">
-                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                          <h3 className="text-xl font-medium flex items-center text-foreground">
-                            <Layers3 className="mr-2 h-5 w-5 text-secondary-foreground" />
-                            Section: {section.name}
-                          </h3>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-4 pb-4 pt-1">
-                          {section.enclosures.length === 0 ? (
-                            <p className="text-sm text-muted-foreground pl-7">This section has no enclosures.</p>
-                          ) : (
-                            <div className="overflow-x-auto">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="w-[40%]">Enclosure Name</TableHead>
-                                    <TableHead className="text-center">Verified / Total</TableHead>
-                                    <TableHead className="w-[30%] text-center">Verification Progress</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {section.enclosures.map(enclosure => {
-                                    const { totalAnimals, verifiedAnimals, progress } = getEnclosureAuditStatus(enclosure);
-                                    return (
-                                      <TableRow key={enclosure.id}>
-                                        <TableCell className="font-medium flex items-center">
-                                          <Fence className="mr-2 h-4 w-4 text-muted-foreground" />
-                                          {enclosure.name}
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                          {verifiedAnimals} / {totalAnimals}
-                                        </TableCell>
-                                        <TableCell>
-                                          <Progress value={progress} className="w-full h-3" aria-label={`${progress.toFixed(0)}% verified`} />
-                                        </TableCell>
-                                      </TableRow>
-                                    );
-                                  })}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          )}
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
+        <Accordion type="multiple" className="w-full space-y-4" defaultValue={defaultSiteAccordionValues}>
+          {zoo.sites.map(site => {
+            const defaultSectionAccordionValues = site.sections.map(section => `section-${section.id}`);
+            return (
+              <AccordionItem key={site.id} value={`site-${site.id}`} className="border rounded-lg shadow-md bg-card">
+                <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                  <h2 className="text-2xl font-semibold flex items-center text-primary">
+                    <Building className="mr-3 h-6 w-6" />
+                    Site: {site.name}
+                  </h2>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6 pt-2">
+                  {site.sections.length === 0 ? (
+                    <p className="text-muted-foreground">This site has no sections.</p>
+                  ) : (
+                    <Accordion type="multiple" className="w-full space-y-3" defaultValue={defaultSectionAccordionValues}>
+                      {site.sections.map(section => (
+                        <AccordionItem key={section.id} value={`section-${section.id}`} className="border rounded-md bg-background">
+                          <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                            <h3 className="text-xl font-medium flex items-center text-foreground">
+                              <Layers3 className="mr-2 h-5 w-5 text-secondary-foreground" />
+                              Section: {section.name}
+                            </h3>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-4 pb-4 pt-1">
+                            {section.enclosures.length === 0 ? (
+                              <p className="text-sm text-muted-foreground pl-7">This section has no enclosures.</p>
+                            ) : (
+                              <div className="overflow-x-auto">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead className="w-[40%]">Enclosure Name</TableHead>
+                                      <TableHead className="text-center">Verified / Total</TableHead>
+                                      <TableHead className="w-[30%] text-center">Verification Progress</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {section.enclosures.map(enclosure => {
+                                      const { totalAnimals, verifiedAnimals, progress } = getEnclosureAuditStatus(enclosure);
+                                      return (
+                                        <TableRow key={enclosure.id}>
+                                          <TableCell className="font-medium flex items-center">
+                                            <Fence className="mr-2 h-4 w-4 text-muted-foreground" />
+                                            {enclosure.name}
+                                          </TableCell>
+                                          <TableCell className="text-center">
+                                            {verifiedAnimals} / {totalAnimals}
+                                          </TableCell>
+                                          <TableCell>
+                                            <Progress value={progress} className="w-full h-3" aria-label={`${progress.toFixed(0)}% verified`} />
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
         </Accordion>
       )}
     </div>
   );
 }
+
