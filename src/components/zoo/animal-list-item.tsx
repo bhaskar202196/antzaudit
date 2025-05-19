@@ -17,11 +17,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 interface AnimalListItemProps {
   animal: Animal;
   onToggleVerify: (animalId: string) => void;
-  sectionName?: string;   // New optional prop
-  enclosureName?: string; // New optional prop
+  sectionName?: string;
+  enclosureName?: string;
 }
 
-const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: string | number | null, fullWidth?: boolean, className?: string }> = ({ icon: Icon, label, value, fullWidth = false, className = '' }) => {
+const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: string | number | null, fullWidth?: boolean, className?: string, isHighlighted?: boolean }> = ({ icon: Icon, label, value, fullWidth = false, className = '', isHighlighted = false }) => {
   if (value === null || value === undefined) return null;
   const displayValue = String(value).trim();
   if (displayValue === '') return null;
@@ -29,8 +29,8 @@ const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: str
   return (
     <div className={`flex items-center text-xs text-muted-foreground ${fullWidth ? 'md:col-span-2' : ''} ${className}`}>
       <Icon className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
-      <span className="font-medium">{label}:</span>&nbsp;
-      <span className="truncate" title={displayValue}>{displayValue}</span>
+      <span className={`font-medium ${isHighlighted ? 'text-foreground' : ''}`}>{label}:</span>&nbsp;
+      <span className={`truncate ${isHighlighted ? 'font-semibold text-foreground' : ''}`} title={displayValue}>{displayValue}</span>
     </div>
   );
 };
@@ -44,7 +44,7 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
     if (!dateString) return undefined;
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return dateString; // Return original string if date is invalid
+      if (isNaN(date.getTime())) return dateString; 
       return date.toLocaleDateString();
     } catch (e) {
       return dateString; 
@@ -79,8 +79,10 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
             </CardTitle>
             <CardDescription className="text-sm text-muted-foreground space-y-0.5 mt-1">
               <div className="flex items-center justify-center sm:justify-start">
-                <Tag className="mr-1 h-3.5 w-3.5 flex-shrink-0" /> 
-                <span className="font-semibold">Species:</span>&nbsp;{animal.species} {animal.commonName && `(${animal.commonName})`}
+                <Tag className="mr-1 h-3.5 w-3.5 flex-shrink-0 text-primary" /> 
+                <span className="font-semibold text-foreground">Species:</span>&nbsp;
+                <span className="font-bold text-foreground">{animal.species}</span>
+                {animal.commonName && <span className="font-bold text-foreground">&nbsp;({animal.commonName})</span>}
               </div>
               {animal.microChip && (
                 <div className="flex items-center justify-center sm:justify-start">
@@ -111,16 +113,6 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
               {animal.identifierType && animal.identifierValue && (
                 <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} fullWidth />
               )}
-              
-              {animal.breedName && (
-                <DetailItem icon={Dna} label="Breed" value={animal.breedName} />
-              )}
-              
-              {animal.morphName && (
-                <DetailItem icon={VenetianMask} label="Morph" value={animal.morphName} />
-              )}
-
-              <DetailItem icon={WeightIcon} label="Weight" value={animal.weight} />
             </div>
 
             <Accordion type="single" collapsible className="w-full mt-3">
@@ -128,11 +120,18 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
                 <AccordionTrigger className="text-xs hover:no-underline py-2 px-1 -ml-1 flex justify-start">
                   <div className="flex items-center text-muted-foreground">
                     <Info className="mr-2 h-4 w-4" /> 
-                    <span>Additional Details</span>
+                    <span>Additional Details (Breed, Age, Dates, etc.)</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-2 pb-0 text-xs space-y-1.5 pl-2">
+                  {animal.breedName && (
+                    <DetailItem icon={Dna} label="Breed" value={animal.breedName} />
+                  )}
+                  {animal.morphName && (
+                    <DetailItem icon={VenetianMask} label="Morph" value={animal.morphName} />
+                  )}
                   <DetailItem icon={Info} label="Age" value={animal.age} />
+                  <DetailItem icon={WeightIcon} label="Weight" value={animal.weight} />
                   <DetailItem icon={PackagePlus} label="Accession Type" value={animal.accessionType} />
                   <DetailItem icon={CalendarDays} label="Accession Date" value={formatDate(animal.accessionDate)} />
                   <DetailItem icon={CalendarDays} label="Birth Date" value={formatDate(animal.birthDate)} />

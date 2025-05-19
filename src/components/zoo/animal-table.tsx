@@ -23,7 +23,7 @@ interface AnimalWithContext extends Animal {
 }
 
 interface AnimalTableProps {
-  animals: AnimalWithContext[]; // Use the extended type
+  animals: AnimalWithContext[];
   onToggleVerify: (animalId: string) => void;
 }
 
@@ -37,17 +37,14 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
             <TableRow>
             <TableHead className="w-[60px] hidden md:table-cell px-2">Image</TableHead>
             <TableHead className="px-2 min-w-[120px]">Name</TableHead>
-            <TableHead className="px-2 min-w-[150px]">Species</TableHead>
-            <TableHead className="hidden sm:table-cell px-2 min-w-[120px]">Common Name</TableHead>
+            <TableHead className="px-2 min-w-[200px] font-bold">Species (Common Name)</TableHead>
             {showSectionEnclosureColumns ? <TableHead className="hidden lg:table-cell px-2 min-w-[100px]">Section</TableHead> : null}
             {showSectionEnclosureColumns ? <TableHead className="hidden lg:table-cell px-2 min-w-[100px]">Enclosure</TableHead> : null}
             <TableHead className="hidden md:table-cell px-2 min-w-[80px]">Gender</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">Micro Chip</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">Ring No.</TableHead>
-            <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">Breed</TableHead>
-            <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">ID Type</TableHead>
-            <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">ID Value</TableHead>
-            <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">Accession Type</TableHead>
+            <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">Identifier Type</TableHead>
+            <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">Identifier Value</TableHead>
             <TableHead className="px-2 min-w-[100px]">Status</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[150px]">Verified At</TableHead>
             <TableHead className="text-right px-2 min-w-[100px]">Actions</TableHead>
@@ -73,8 +70,9 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
                 )}
                 </TableCell>
                 <TableCell className="font-medium px-2">{animal.name}</TableCell>
-                <TableCell className="px-2">{animal.species}</TableCell>
-                <TableCell className="hidden sm:table-cell px-2">{animal.commonName || '-'}</TableCell>
+                <TableCell className="px-2 font-semibold text-foreground">
+                  {animal.species}{animal.commonName ? ` (${animal.commonName})` : ''}
+                </TableCell>
                 {showSectionEnclosureColumns ? (
                   <TableCell className="hidden lg:table-cell px-2">
                     {animal.sectionName ? <span className="flex items-center"><Layers size={14} className="mr-1 text-muted-foreground"/> {animal.sectionName}</span> : '-'}
@@ -101,22 +99,12 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
                     ) : '-'}
                 </TableCell>
                 <TableCell className="hidden xl:table-cell px-2">
-                    {animal.breedName ? (
-                        <span className="flex items-center"><Dna size={14} className="mr-1 text-muted-foreground"/> {animal.breedName}</span>
-                    ) : '-'}
-                </TableCell>
-                <TableCell className="hidden xl:table-cell px-2">
                     {animal.identifierType ? (
                         <span className="flex items-center"><BadgeHelp size={14} className="mr-1 text-muted-foreground"/> {animal.identifierType}</span>
                     ) : '-'}
                 </TableCell>
-                <TableCell className="hidden xl:table-cell px-2">
-                    {animal.identifierValue || '-'}
-                </TableCell>
                  <TableCell className="hidden xl:table-cell px-2">
-                    {animal.accessionType ? (
-                        <span className="flex items-center"><PackagePlus size={14} className="mr-1 text-muted-foreground"/> {animal.accessionType}</span>
-                    ) : '-'}
+                    {animal.identifierValue || '-'}
                 </TableCell>
                 <TableCell className="px-2">
                 {animal.verified ? (
@@ -155,4 +143,3 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
     </Card>
   );
 }
-
