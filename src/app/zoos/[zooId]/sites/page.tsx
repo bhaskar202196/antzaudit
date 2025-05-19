@@ -8,7 +8,7 @@ import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-conte
 import { useZooData } from '@/contexts/zoo-data-context'; 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, Download, UploadCloud, Loader2 } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Download, UploadCloud, Loader2, ListChecks } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +31,8 @@ const convertZooDataToCSV = (zoo: Zoo, currentUser: User | null): { csv: string;
     'Verified', 'Verified At', 'Who Verified',
     'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue',
     'BreedName', 'MorphName', 'Weight', 'Age',
-    'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row'
+    'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row',
+    'Night Cell Presence', 'Air Conditioning', 'Camera' // Added new boolean features
   ];
 
   const rows: (string | number | boolean | undefined | null)[][] = [];
@@ -51,7 +52,10 @@ const convertZooDataToCSV = (zoo: Zoo, currentUser: User | null): { csv: string;
             animal.verified && currentUser ? currentUser.email : '', // Populate 'Who Verified'
             animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
             animal.breedName, animal.morphName, animal.weight, animal.age,
-            animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber
+            animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber,
+            animal.nightCellPresence ? 'Yes' : 'No', // Added new boolean features
+            animal.airConditioning ? 'Yes' : 'No',
+            animal.camera ? 'Yes' : 'No'
           ]);
         });
       });
@@ -213,7 +217,10 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <Skeleton className="h-10 w-36" />
-          <Skeleton className="h-10 w-48" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" /> {/* Report Button Skeleton */}
+            <Skeleton className="h-10 w-48" /> {/* Export Button Skeleton */}
+          </div>
         </div>
         <Skeleton className="h-10 w-1/2 mb-2" />
         <Skeleton className="h-8 w-1/3 mb-8" />
@@ -226,7 +233,7 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
           </div>
           <Skeleton className="h-4 w-3/4 mt-3" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 xl:gap-8">
           {[1, 2, 3].map(i => (
             <Card key={i} className="flex flex-col">
               <Skeleton className="h-48 w-full" />
@@ -271,9 +278,16 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
           </Link>
         </Button>
-        <Button variant="outline" onClick={handleExportZooCSV}>
-          <Download className="mr-2 h-4 w-4" /> Export All Zoo Data (CSV)
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/zoos/${zoo.id}/report`}>
+              <ListChecks className="mr-2 h-4 w-4" /> View Audit Report
+            </Link>
+          </Button>
+          <Button variant="outline" onClick={handleExportZooCSV}>
+            <Download className="mr-2 h-4 w-4" /> Export All Zoo Data (CSV)
+          </Button>
+        </div>
       </div>
       <h1 className="text-4xl font-bold mb-2 tracking-tight text-gray-800">{zoo.name}</h1>
       <p className="text-xl text-muted-foreground mb-8">Sites within this Zoo</p>
