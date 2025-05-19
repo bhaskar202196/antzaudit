@@ -2,12 +2,12 @@
 // src/app/zoos/[zooId]/report/page.tsx
 "use client";
 import type { Enclosure, Zoo } from '@/lib/types';
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useState, useCallback } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
 import { useZooData } from '@/contexts/zoo-data-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, ListChecks, Building, Layers3, Fence } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, ListChecks, Building, Layers3, Fence, Maximize, Minimize } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -33,6 +33,9 @@ export default function ZooReportPage({ params: paramsPromise }: ZooReportPagePr
   const [zoo, setZoo] = useState<Zoo | null | undefined>(null);
   const { setBreadcrumbs } = useBreadcrumbs();
 
+  const [openSiteItemValues, setOpenSiteItemValues] = useState<string[]>([]);
+  const [openSectionItemValuesBySite, setOpenSectionItemValuesBySite] = useState<Record<string, string[]>>({});
+
   useEffect(() => {
     const currentZoo = getZooByIdFromContext(zooId);
     setZoo(currentZoo);
@@ -43,11 +46,57 @@ export default function ZooReportPage({ params: paramsPromise }: ZooReportPagePr
         { label: "Audit Report", href: `/zoos/${zooId}/report` },
       ];
       setBreadcrumbs(breadcrumbsData);
+
+      // Initialize accordions to be expanded
+      const initialSiteValues = currentZoo.sites.map(site => `site-${site.id}`);
+      setOpenSiteItemValues(initialSiteValues);
+
+      const initialSectionValues: Record<string, string[]> = {};
+      currentZoo.sites.forEach(site => {
+        initialSectionValues[`site-${site.id}`] = site.sections.map(section => `section-${section.id}`);
+      });
+      setOpenSectionItemValuesBySite(initialSectionValues);
+
     } else if (!isZooDataLoading) {
       setZoo(undefined);
       setBreadcrumbs([{ label: "Zoo Not Found", href: `/dashboard` }, { label: "Audit Report", href: `/dashboard` }]);
     }
   }, [zooId, getZooByIdFromContext, setBreadcrumbs, isZooDataLoading]);
+
+  const handleExpandAll = useCallback(() => {
+    if (!zoo) return;
+    const allSiteValues = zoo.sites.map(site => `site-${site.id}`);
+    setOpenSiteItemValues(allSiteValues);
+
+    const allSectionValues: Record<string, string[]> = {};
+    zoo.sites.forEach(site => {
+      allSectionValues[`site-${site.id}`] = site.sections.map(section => `section-${section.id}`);
+    });
+    setOpenSectionItemValuesBySite(allSectionValues);
+  }, [zoo]);
+
+  const handleCollapseAll = useCallback(() => {
+    setOpenSiteItemValues([]);
+    const collapsedSectionValues: Record<string, string[]> = {};
+    if (zoo) {
+      zoo.sites.forEach(site => {
+        collapsedSectionValues[`site-${site.id}`] = [];
+      });
+    }
+    setOpenSectionItemValuesBySite(collapsedSectionValues);
+  }, [zoo]);
+
+  const handleSiteAccordionChange = (values: string[]) => {
+    setOpenSiteItemValues(values);
+  };
+
+  const handleSectionAccordionChange = (siteItemValue: string, values: string[]) => {
+    setOpenSectionItemValuesBySite(prev => ({
+      ...prev,
+      [siteItemValue]: values,
+    }));
+  };
+
 
   if (isZooDataLoading || zoo === null) {
     return (
@@ -88,15 +137,24 @@ export default function ZooReportPage({ params: paramsPromise }: ZooReportPagePr
     );
   }
 
-  const defaultSiteAccordionValues = zoo.sites.map(site => `site-${site.id}`);
-
   return (
     <div className="animate-fadeIn space-y-8">
-      <Button asChild variant="outline">
-        <Link href={`/zoos/${zooId}/sites`}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Sites in {zoo.name}
-        </Link>
-      </Button>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <Button asChild variant="outline">
+          <Link href={`/zoos/${zooId}/sites`}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Sites in {zoo.name}
+          </Link>
+        </Button>
+        <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExpandAll}>
+              <Maximize className="mr-2 h-4 w-4" /> Expand All
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleCollapseAll}>
+              <Minimize className="mr-2 h-4 w-4" /> Collapse All
+            </Button>
+        </div>
+      </div>
+      
 
       <header className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight text-gray-800 flex items-center">
@@ -116,11 +174,16 @@ export default function ZooReportPage({ params: paramsPromise }: ZooReportPagePr
           </CardContent>
         </Card>
       ) : (
-        <Accordion type="multiple" className="w-full space-y-4" defaultValue={defaultSiteAccordionValues}>
+        <Accordion 
+          type="multiple" 
+          className="w-full space-y-4" 
+          value={openSiteItemValues}
+          onValueChange={handleSiteAccordionChange}
+        >
           {zoo.sites.map(site => {
-            const defaultSectionAccordionValues = site.sections.map(section => `section-${section.id}`);
+            const siteItemValue = `site-${site.id}`;
             return (
-              <AccordionItem key={site.id} value={`site-${site.id}`} className="border rounded-lg shadow-md bg-card">
+              <AccordionItem key={site.id} value={siteItemValue} className="border rounded-lg shadow-md bg-card">
                 <AccordionTrigger className="px-6 py-4 hover:no-underline">
                   <h2 className="text-2xl font-semibold flex items-center text-primary">
                     <Building className="mr-3 h-6 w-6" />
@@ -131,9 +194,16 @@ export default function ZooReportPage({ params: paramsPromise }: ZooReportPagePr
                   {site.sections.length === 0 ? (
                     <p className="text-muted-foreground">This site has no sections.</p>
                   ) : (
-                    <Accordion type="multiple" className="w-full space-y-3" defaultValue={defaultSectionAccordionValues}>
-                      {site.sections.map(section => (
-                        <AccordionItem key={section.id} value={`section-${section.id}`} className="border rounded-md bg-background">
+                    <Accordion 
+                      type="multiple" 
+                      className="w-full space-y-3" 
+                      value={openSectionItemValuesBySite[siteItemValue] || []}
+                      onValueChange={(values) => handleSectionAccordionChange(siteItemValue, values)}
+                    >
+                      {site.sections.map(section => {
+                        const sectionItemValue = `section-${section.id}`;
+                        return (
+                        <AccordionItem key={section.id} value={sectionItemValue} className="border rounded-md bg-background">
                           <AccordionTrigger className="px-4 py-3 hover:no-underline">
                             <h3 className="text-xl font-medium flex items-center text-foreground">
                               <Layers3 className="mr-2 h-5 w-5 text-secondary-foreground" />
@@ -177,7 +247,8 @@ export default function ZooReportPage({ params: paramsPromise }: ZooReportPagePr
                             )}
                           </AccordionContent>
                         </AccordionItem>
-                      ))}
+                      );
+                      })}
                     </Accordion>
                   )}
                 </AccordionContent>
