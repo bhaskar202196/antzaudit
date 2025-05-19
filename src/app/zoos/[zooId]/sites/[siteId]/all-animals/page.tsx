@@ -188,6 +188,18 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
 
   }, [allSiteAnimals, zooId, siteId, updateAnimalVerification, toast, getEnclosureById]);
 
+  const filteredSiteAnimals = allSiteAnimals.filter(animal => {
+    const searchText = filterText.toLowerCase();
+    if (!searchText) return true;
+    return (
+      animal.species?.toLowerCase().includes(searchText) ||
+      animal.commonName?.toLowerCase().includes(searchText) ||
+      animal.sectionName?.toLowerCase().includes(searchText) ||
+      animal.enclosureName?.toLowerCase().includes(searchText) ||
+      animal.name?.toLowerCase().includes(searchText) // Also filter by animal name itself
+    );
+  });
+
   const handleExportCSV = useCallback(() => {
     if (!filteredSiteAnimals || filteredSiteAnimals.length === 0) { // Use filtered animals for export
       setTimeout(()=> {
@@ -223,18 +235,6 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
        },0);
     }
   }, [filteredSiteAnimals, site, toast, user]); // Depends on filteredSiteAnimals
-  
-  const filteredSiteAnimals = allSiteAnimals.filter(animal => {
-    const searchText = filterText.toLowerCase();
-    if (!searchText) return true;
-    return (
-      animal.species?.toLowerCase().includes(searchText) ||
-      animal.commonName?.toLowerCase().includes(searchText) ||
-      animal.sectionName?.toLowerCase().includes(searchText) ||
-      animal.enclosureName?.toLowerCase().includes(searchText) ||
-      animal.name?.toLowerCase().includes(searchText) // Also filter by animal name itself
-    );
-  });
   
   const totalPages = Math.ceil(filteredSiteAnimals.length / itemsPerPage);
   const paginatedSiteAnimals = filteredSiteAnimals.slice(
