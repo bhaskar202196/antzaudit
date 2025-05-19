@@ -13,6 +13,8 @@ import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List, ChevronLeft, Chev
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 interface AllAnimalsPageProps {
   params: Promise<{ zooId: string; siteId: string }>;
@@ -27,7 +29,6 @@ interface SiteAnimalViewData extends Animal {
 }
 
 type ViewMode = 'card' | 'table';
-const ITEMS_PER_PAGE = 10;
 
 // Helper function to convert site animal data to CSV format
 const convertSiteAnimalsToCSV = (animals: SiteAnimalViewData[], siteName: string, currentUser: User | null): string => {
@@ -87,6 +88,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
   const [allSiteAnimals, setAllSiteAnimals] = useState<SiteAnimalViewData[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
@@ -223,10 +225,10 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
   }, [allSiteAnimals, site, toast, user]);
   
   // Pagination logic
-  const totalPages = Math.ceil(allSiteAnimals.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(allSiteAnimals.length / itemsPerPage);
   const paginatedSiteAnimals = allSiteAnimals.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   if (isZooDataLoading || zoo === null || (zoo && site === null) ) { 
@@ -308,29 +310,50 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
         <AnimalTable animals={paginatedSiteAnimals} onToggleVerify={handleToggleVerify} />
       )}
 
-      {allSiteAnimals.length > ITEMS_PER_PAGE && (
-        <div className="mt-8 flex justify-center items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
+      {totalPages > 1 && (
+        <div className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Label htmlFor={`all-animals-items-per-page-select-${siteId}`} className="text-sm text-muted-foreground whitespace-nowrap">Items per page:</Label>
+            <Select
+              value={String(itemsPerPage)}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1); // Reset to first page
+              }}
+            >
+              <SelectTrigger id={`all-animals-items-per-page-select-${siteId}`} className="w-[80px] h-9">
+                <SelectValue placeholder={String(itemsPerPage)} />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 25, 50, 100].map(size => (
+                  <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

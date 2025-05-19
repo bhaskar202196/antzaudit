@@ -13,13 +13,14 @@ import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List, ChevronLeft, Chev
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 interface AnimalVerificationPageProps {
   params: Promise<{ zooId: string; siteId: string; sectionId: string; enclosureId: string }>; // Added sectionId
 }
 
 type ViewMode = 'card' | 'table';
-const ITEMS_PER_PAGE = 10;
 
 // Helper function to convert animal data to CSV format
 const convertAnimalsToCSV = (animals: Animal[], enclosureName: string, currentUser: User | null): string => {
@@ -76,6 +77,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
   const [enclosure, setEnclosure] = useState<Enclosure | null | undefined>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('card'); // State for view mode
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
@@ -227,10 +229,10 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
   }
 
   const animals = enclosure.animals; 
-  const totalPages = Math.ceil(animals.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(animals.length / itemsPerPage);
   const paginatedAnimals = animals.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   return (
@@ -281,29 +283,50 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
         <AnimalTable animals={paginatedAnimals} onToggleVerify={handleToggleVerify} />
       )}
 
-      {animals.length > ITEMS_PER_PAGE && (
-        <div className="mt-8 flex justify-center items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
+      {totalPages > 1 && (
+         <div className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Label htmlFor={`enclosure-items-per-page-select-${enclosureId}`} className="text-sm text-muted-foreground whitespace-nowrap">Items per page:</Label>
+            <Select
+              value={String(itemsPerPage)}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1); // Reset to first page
+              }}
+            >
+              <SelectTrigger id={`enclosure-items-per-page-select-${enclosureId}`} className="w-[80px] h-9">
+                <SelectValue placeholder={String(itemsPerPage)} />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 25, 50, 100].map(size => (
+                  <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
