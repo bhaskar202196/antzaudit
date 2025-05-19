@@ -313,7 +313,7 @@ export default function ZooSitesPage({ params: paramsPromise }: ZooSitesPageProp
       {zoo.sites.length === 0 ? (
         <p className="text-lg text-muted-foreground">This zoo has no sites configured yet. You can add them by uploading a CSV above.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 xl:gap-8"> {/* Changed lg:grid-cols-3 to lg:grid-cols-2 */}
           {zoo.sites.map(site => (
             <SiteCard key={site.id} site={site} zooId={zoo.id} />
           ))}
