@@ -47,7 +47,7 @@ export default function SiteCard({ site, zooId }: SiteCardProps) {
           Contains a total of {totalAnimalsInSite} animal(s) across all sections and enclosures.
         </p>
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row gap-2">
+      <CardFooter className="flex flex-col sm:flex-row sm:justify-between gap-2">
         <Button asChild className="w-full sm:w-auto" variant="outline" size="sm">
           <Link href={`/zoos/${zooId}/sites/${site.id}/sections`}>
             <Eye className="mr-2 h-4 w-4" />
