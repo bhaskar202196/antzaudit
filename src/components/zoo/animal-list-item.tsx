@@ -10,18 +10,24 @@ import {
   Scale, CalendarDays, BadgeHelp, PackagePlus, Info, WeightIcon, VenetianMask, Dna,
   Layers, // For Section
   Fence, // For Enclosure
-  Moon, ThermometerSnowflake, Video // For new features
+  Moon, ThermometerSnowflake, Video, Users // For Animal Count
 } from 'lucide-react'; 
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { useZooData } from '@/contexts/zoo-data-context'; // To call updateAnimalBooleanFeature
-import { useParams } from 'next/navigation'; // To get zooId, siteId etc.
+
+// Updated Animal type for display, expecting animalCount and isGrouped
+interface DisplayAnimal extends Animal {
+  animalCount: number;
+  isGrouped: boolean;
+  // sectionName and enclosureName are passed as props if available
+}
 
 interface AnimalListItemProps {
-  animal: Animal;
+  animal: DisplayAnimal;
   onToggleVerify: (animalId: string) => void;
+  onToggleFeature: (animalId: string, featureName: 'nightCellPresence' | 'airConditioning' | 'camera', value: boolean) => void;
   sectionName?: string;
   enclosureName?: string;
 }
@@ -40,29 +46,15 @@ const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: str
   );
 };
 
-export default function AnimalListItem({ animal, onToggleVerify, sectionName, enclosureName }: AnimalListItemProps) {
+export default function AnimalListItem({ animal, onToggleVerify, onToggleFeature, sectionName, enclosureName }: AnimalListItemProps) {
   const verificationDate = animal.verified && animal.verifiedAt 
     ? new Date(animal.verifiedAt).toLocaleString() 
     : null;
 
-  const params = useParams<{ zooId: string; siteId: string; sectionId?: string; enclosureId?: string }>();
-  const { updateAnimalBooleanFeature } = useZooData();
-
   const handleFeatureToggle = (featureName: 'nightCellPresence' | 'airConditioning' | 'camera', value: boolean) => {
-    if (params.zooId && params.siteId && (params.sectionId || animal.sectionId) && (params.enclosureId || animal.enclosureId)) {
-      // For "all-animals" page, sectionId and enclosureId might not be in params, so get from animal object
-      const currentSectionId = params.sectionId || (animal as any).sectionId;
-      const currentEnclosureId = params.enclosureId || (animal as any).enclosureId;
-      if (!currentSectionId || !currentEnclosureId) {
-        console.error("Section ID or Enclosure ID missing for feature toggle on all-animals page context.");
-        return;
-      }
-      updateAnimalBooleanFeature(params.zooId, params.siteId, currentSectionId, currentEnclosureId, animal.id, featureName, value);
-    } else {
-      console.error("Missing parameters for feature toggle.");
-    }
+    if (animal.isGrouped) return; // Prevent action on grouped animals
+    onToggleFeature(animal.id, featureName, value);
   };
-
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return undefined;
@@ -76,7 +68,7 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
   }
 
   return (
-    <Card className="flex flex-col shadow-md hover:shadow-lg transition-shadow duration-300">
+    <Card className={`flex flex-col shadow-md hover:shadow-lg transition-shadow duration-300 ${animal.isGrouped ? 'bg-blue-50 border-blue-200' : ''}`}>
       <div className="flex flex-col sm:flex-row items-start p-4 gap-4">
         {animal.imageUrl && (
            <div className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden flex-shrink-0 self-center sm:self-start">
@@ -100,6 +92,11 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
             <CardTitle className="text-xl font-semibold flex items-center justify-center sm:justify-start">
               <PawPrint className="mr-2 h-5 w-5 text-primary hidden sm:inline" />
               {animal.name}
+              {animal.isGrouped && (
+                <Badge variant="secondary" className="ml-2 flex items-center">
+                  <Users className="mr-1 h-3.5 w-3.5" /> Count: {animal.animalCount}
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription className="text-sm text-muted-foreground space-y-0.5 mt-1">
               <div className="flex items-center justify-center sm:justify-start">
@@ -108,7 +105,7 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
                 <span className="font-bold text-foreground">{animal.species}</span>
                 {animal.commonName && <span className="font-bold text-foreground">&nbsp;({animal.commonName})</span>}
               </div>
-              {animal.microChip && (
+               {animal.microChip && (
                 <div className="flex items-center justify-center sm:justify-start">
                   <Fingerprint className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
                   <span className="font-semibold">Microchip:</span>&nbsp;{animal.microChip}
@@ -121,7 +118,7 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
                 </div>
               )}
             </CardDescription>
-            {animal.verified && verificationDate && (
+            {animal.verified && verificationDate && !animal.isGrouped && (
               <p className="text-xs text-muted-foreground mt-1.5 flex items-center justify-center sm:justify-start">
                 <Clock className="mr-1 h-3 w-3" /> Verified on: {verificationDate}
               </p>
@@ -139,8 +136,7 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
               )}
             </div>
 
-            {/* New Boolean Feature Toggles */}
-            <div className="space-y-3 my-3 border-t border-b py-3">
+            <div className={`space-y-3 my-3 border-t border-b py-3 ${animal.isGrouped ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <div className="flex items-center justify-between">
                 <Label htmlFor={`nightCell-${animal.id}`} className="flex items-center text-sm font-medium">
                   <Moon className="mr-2 h-4 w-4 text-muted-foreground" /> Night Cell
@@ -150,6 +146,7 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
                   checked={!!animal.nightCellPresence}
                   onCheckedChange={(value) => handleFeatureToggle('nightCellPresence', value)}
                   aria-label="Night Cell Presence"
+                  disabled={animal.isGrouped}
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -161,6 +158,7 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
                   checked={!!animal.airConditioning}
                   onCheckedChange={(value) => handleFeatureToggle('airConditioning', value)}
                   aria-label="Air Conditioning Presence"
+                  disabled={animal.isGrouped}
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -172,10 +170,10 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
                   checked={!!animal.camera}
                   onCheckedChange={(value) => handleFeatureToggle('camera', value)}
                   aria-label="Camera Presence"
+                  disabled={animal.isGrouped}
                 />
               </div>
             </div>
-
 
             <Accordion type="single" collapsible className="w-full mt-3">
               <AccordionItem value="additional-details">
@@ -205,7 +203,7 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
         </div>
 
         <div className="flex flex-col items-center sm:items-end gap-2 mt-2 sm:mt-0 flex-shrink-0 self-center sm:self-start">
-          {animal.verified ? (
+          {!animal.isGrouped && (animal.verified ? (
             <Badge variant="default" className="bg-accent text-accent-foreground select-none">
               <CheckCircle size={16} className="mr-1" /> Verified
             </Badge>
@@ -213,12 +211,19 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
             <Badge variant="secondary" className="select-none">
               <CircleOff size={16} className="mr-1" /> Not Verified
             </Badge>
+          ))}
+          {animal.isGrouped && (
+            <Badge variant="outline" className="select-none border-blue-500 text-blue-700">
+              Grouped
+            </Badge>
           )}
           <Button
             onClick={() => onToggleVerify(animal.id)}
             variant={animal.verified ? "outline" : "default"}
             className={`w-full sm:w-auto ${!animal.verified ? 'bg-accent text-accent-foreground hover:bg-accent/90 focus-visible:ring-accent' : 'border-accent text-accent hover:bg-accent/10 focus-visible:ring-accent'}`}
             size="sm"
+            disabled={animal.isGrouped}
+            title={animal.isGrouped ? "Verification disabled for grouped animals" : (animal.verified ? "Unverify Animal" : "Verify Animal")}
           >
             {animal.verified ? (
               <><CircleOff size={16} className="mr-2" /> Unverify</>

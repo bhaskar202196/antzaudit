@@ -17,44 +17,52 @@ import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
-interface AllAnimalsPageProps {
-  params: Promise<{ zooId: string; siteId: string }>;
-}
-
-// Enhanced animal data type for this page to include origin info
-interface SiteAnimalViewData extends Animal {
+// Enhanced animal data type for this page to include origin info and grouping
+interface DisplayAnimal extends Animal {
   sectionId: string;
   sectionName: string;
   enclosureId: string;
   enclosureName: string;
+  animalCount: number;
+  isGrouped: boolean;
+  originalAnimalIds?: string[]; // Store original IDs for potential future use if a group action is needed
 }
 
 type ViewMode = 'card' | 'table';
 
 // Helper function to convert site animal data to CSV format
-const convertSiteAnimalsToCSV = (animals: SiteAnimalViewData[], siteName: string, currentUser: User | null): string => {
+const convertSiteAnimalsToCSV = (animals: DisplayAnimal[], siteName: string, currentUser: User | null): string => {
+  // Note: CSV export will still list individual animals if they were grouped in the UI.
+  // This export reflects the raw, ungrouped data structure if DisplayAnimal holds originalAnimalIds.
+  // For now, this function assumes 'animals' param might be grouped, but export needs to be of individual underlying animals.
+  // This part needs careful thought: if we export the *displayed* (grouped) list, counts are fine.
+  // If we want to export underlying individual animals, we'd need to expand any grouped entries.
+  // For now, let's assume the CSV reflects the DISPLAYED state, including counts for grouped animals.
+
   const headers = [
     'Section Name', 'Enclosure Name', 
-    'Animal ID', 'Animal Name', 'Species', 'Common Name', 'Gender', 
+    'Animal ID (Primary)', 'Animal Name', 'Species', 'Common Name', 'Gender', 
+    'Animal Count', // Added Animal Count
     'Verified', 'Verified At', 'Who Verified',
     'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue', 
     'BreedName', 'MorphName', 'Weight', 'Age', 
     'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row',
-    'Night Cell Presence', 'Air Conditioning', 'Camera' // New features
+    'Night Cell Presence', 'Air Conditioning', 'Camera'
   ];
   
   const rows = animals.map(animal => [
     animal.sectionName, animal.enclosureName,
     animal.id, animal.name, animal.species, animal.commonName, animal.gender,
+    animal.animalCount, // Use animalCount
     animal.verified ? 'Yes' : 'No',
     animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : '',
-    animal.verified && currentUser ? currentUser.email : '',
+    animal.verified && currentUser && !animal.isGrouped ? currentUser.email : '', // Only show verifier if not grouped
     animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
     animal.breedName, animal.morphName, animal.weight, animal.age,
     animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber,
-    animal.nightCellPresence ? 'Yes' : 'No', // New features
-    animal.airConditioning ? 'Yes' : 'No',  // New features
-    animal.camera ? 'Yes' : 'No'             // New features
+    animal.nightCellPresence ? 'Yes' : 'No', 
+    animal.airConditioning ? 'Yes' : 'No',  
+    animal.camera ? 'Yes' : 'No'
   ]);
 
   const escapeField = (field: string | number | boolean | undefined | null) => {
@@ -74,6 +82,78 @@ const convertSiteAnimalsToCSV = (animals: SiteAnimalViewData[], siteName: string
   return csvContent;
 };
 
+const groupAnimalsForDisplay = (animals: Animal[], siteData: Site): DisplayAnimal[] => {
+  const animalsWithContext = animals.map(a => {
+    // Find section and enclosure for each animal to get their names
+    let sectionName = "N/A", enclosureName = "N/A", sectionId = "N/A", enclosureId = "N/A";
+    for (const sec of siteData.sections) {
+      for (const enc of sec.enclosures) {
+        if (enc.animals.some(animalInEnc => animalInEnc.id === a.id)) {
+          sectionName = sec.name;
+          enclosureName = enc.name;
+          sectionId = sec.id;
+          enclosureId = enc.id;
+          break;
+        }
+      }
+      if (sectionName !== "N/A") break;
+    }
+    return { ...a, sectionId, sectionName, enclosureId, enclosureName };
+  });
+
+
+  const result: DisplayAnimal[] = [];
+  const identifiableAnimals = animalsWithContext.filter(a => a.identifierType && a.identifierValue);
+  const nonIdentifiableAnimals = animalsWithContext.filter(a => !(a.identifierType && a.identifierValue));
+
+  identifiableAnimals.forEach(animal => {
+    result.push({ ...animal, animalCount: 1, isGrouped: false });
+  });
+
+  if (nonIdentifiableAnimals.length > 0) {
+    const sortedNonIdentifiable = [...nonIdentifiableAnimals].sort((a, b) => {
+      const keyA = `${a.species}|${a.commonName}|${a.gender}|${a.sectionName}|${a.enclosureName}`;
+      const keyB = `${b.species}|${b.commonName}|${b.gender}|${b.sectionName}|${b.enclosureName}`;
+      return keyA.localeCompare(keyB);
+    });
+
+    let currentGroupAnimal = sortedNonIdentifiable[0];
+    let count = 1;
+    const currentGroupOriginalIds = [currentGroupAnimal.id];
+
+    for (let i = 1; i < sortedNonIdentifiable.length; i++) {
+      const animal = sortedNonIdentifiable[i];
+      if (
+        animal.species === currentGroupAnimal.species &&
+        animal.commonName === currentGroupAnimal.commonName &&
+        animal.gender === currentGroupAnimal.gender &&
+        animal.sectionName === currentGroupAnimal.sectionName &&
+        animal.enclosureName === currentGroupAnimal.enclosureName
+      ) {
+        count++;
+        currentGroupOriginalIds.push(animal.id);
+      } else {
+        result.push({ ...currentGroupAnimal, animalCount: count, isGrouped: count > 1, originalAnimalIds: count > 1 ? [...currentGroupOriginalIds] : undefined });
+        currentGroupAnimal = animal;
+        count = 1;
+        currentGroupOriginalIds.length = 0; // Clear array
+        currentGroupOriginalIds.push(animal.id);
+      }
+    }
+    result.push({ ...currentGroupAnimal, animalCount: count, isGrouped: count > 1, originalAnimalIds: count > 1 ? [...currentGroupOriginalIds] : undefined });
+  }
+  
+  return result.sort((a, b) => {
+    if (a.sectionName.localeCompare(b.sectionName) !== 0) {
+      return a.sectionName.localeCompare(b.sectionName);
+    }
+    if (a.enclosureName.localeCompare(b.enclosureName) !== 0) {
+      return a.enclosureName.localeCompare(b.enclosureName);
+    }
+    return a.name.localeCompare(b.name);
+  });
+};
+
 
 export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPageProps) {
   const params = use(paramsPromise);
@@ -83,14 +163,14 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
     getSiteById: getSiteByIdFromContext,
     getZooById: getZooByIdFromContext,
     updateAnimalVerification, 
+    updateAnimalBooleanFeature,
     isLoading: isZooDataLoading,
-    getEnclosureById // To get fresh animal data after update
   } = useZooData();
   const { user } = useAuth();
 
   const [zoo, setZoo] = useState<Zoo | null | undefined>(null);
   const [site, setSite] = useState<Site | null | undefined>(null);
-  const [allSiteAnimals, setAllSiteAnimals] = useState<SiteAnimalViewData[]>([]);
+  const [processedAnimals, setProcessedAnimals] = useState<DisplayAnimal[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -113,26 +193,21 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
         ];
         setBreadcrumbs(breadcrumbsData);
 
-        const animals: SiteAnimalViewData[] = [];
+        let allAnimalsFromSite: Animal[] = [];
         currentSite.sections.forEach(section => {
           section.enclosures.forEach(enclosure => {
-            enclosure.animals.forEach(animal => {
-              animals.push({
-                ...animal,
-                sectionId: section.id,
-                sectionName: section.name,
-                enclosureId: enclosure.id,
-                enclosureName: enclosure.name,
-              });
-            });
+            allAnimalsFromSite.push(...enclosure.animals);
           });
         });
-        setAllSiteAnimals(animals);
+        
+        const grouped = groupAnimalsForDisplay(allAnimalsFromSite, currentSite);
+        setProcessedAnimals(grouped);
         setCurrentPage(1); 
         setFilterText(''); 
 
       } else if (!isZooDataLoading) {
         setSite(undefined);
+        setProcessedAnimals([]);
         setBreadcrumbs([
           { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
           { label: "Site Not Found", href: `/zoos/${zooId}/sites` }
@@ -140,15 +215,17 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       }
     } else if(!isZooDataLoading) {
       setZoo(undefined);
+      setProcessedAnimals([]);
       setBreadcrumbs([{label: "Zoo Not Found", href: "/dashboard"}]);
     }
   }, [zooId, siteId, getZooByIdFromContext, getSiteByIdFromContext, setBreadcrumbs, isZooDataLoading]);
 
   const handleToggleVerify = useCallback((animalId: string) => {
-    const animalData = allSiteAnimals.find(a => a.id === animalId);
-    if (!animalData) {
-      console.error("Animal data not found for toggling verification:", animalId);
-      toast({ title: "Error", description: "Could not find animal data to update.", variant: "destructive"});
+    const animalData = processedAnimals.find(a => a.id === animalId);
+    if (!animalData || animalData.isGrouped) { // Do not allow verifying grouped animals
+      if (animalData?.isGrouped) {
+        toast({ title: "Action Disabled", description: "Verification actions are disabled for grouped animals.", variant: "default", className:"bg-secondary text-secondary-foreground" });
+      }
       return;
     }
 
@@ -158,41 +235,53 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
     
     updateAnimalVerification(zooId, siteId, animalSectionId, animalEnclosureId, animalId, isNowVerified, newVerifiedAt);
 
-     setAllSiteAnimals(prevAnimals => 
+    // Optimistic update for the displayed list
+    setProcessedAnimals(prevAnimals => 
         prevAnimals.map(animal => 
           animal.id === animalId 
             ? { ...animal, verified: isNowVerified, verifiedAt: newVerifiedAt } 
             : animal
         )
       );
-
+    
     setTimeout(() => {
-        const currentAnimalFromEnclosure = getEnclosureById(zooId, siteId, animalSectionId, animalEnclosureId)?.animals.find(a => a.id === animalId);
-        if (currentAnimalFromEnclosure) {
-            let toastTitle = `Animal ${currentAnimalFromEnclosure.verified ? 'Verified' : 'Unverified'}`;
-            let toastDescription = `${currentAnimalFromEnclosure.name} (${currentAnimalFromEnclosure.species}) status updated.`;
-            if (currentAnimalFromEnclosure.verified && currentAnimalFromEnclosure.verifiedAt) {
-                toastDescription = `${currentAnimalFromEnclosure.name} (${currentAnimalFromEnclosure.species}) verified on ${new Date(currentAnimalFromEnclosure.verifiedAt).toLocaleString()}.`;
-            }
-             toast({
-                title: toastTitle,
-                description: toastDescription,
-                variant: currentAnimalFromEnclosure.verified ? 'default' : 'default', 
-                className: currentAnimalFromEnclosure.verified ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground'
-            });
-        } else {
-             toast({
-                title: `Animal ${isNowVerified ? 'Verified' : 'Unverified'}`,
-                description: `${animalData.name} status updated.`,
-                variant: isNowVerified ? 'default' : 'default',
-                className: isNowVerified ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground'
-            });
+        let toastTitle = `Animal ${isNowVerified ? 'Verified' : 'Unverified'}`;
+        let toastDescription = `${animalData.name} (${animalData.species}) status updated.`;
+        if (isNowVerified && newVerifiedAt) {
+            toastDescription = `${animalData.name} (${animalData.species}) verified on ${new Date(newVerifiedAt).toLocaleString()}.`;
         }
+        toast({
+            title: toastTitle,
+            description: toastDescription,
+            variant: isNowVerified ? 'default' : 'default', 
+            className: isNowVerified ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground'
+        });
     }, 0);
 
-  }, [allSiteAnimals, zooId, siteId, updateAnimalVerification, toast, getEnclosureById]);
+  }, [processedAnimals, zooId, siteId, updateAnimalVerification, toast]);
 
-  const filteredSiteAnimals = allSiteAnimals.filter(animal => {
+  const handleBooleanFeatureToggle = useCallback((animalId: string, featureName: 'nightCellPresence' | 'airConditioning' | 'camera', value: boolean) => {
+    const animalData = processedAnimals.find(a => a.id === animalId);
+     if (!animalData || animalData.isGrouped) {
+      if (animalData?.isGrouped) {
+        toast({ title: "Action Disabled", description: `Toggling ${featureName} is disabled for grouped animals.`, variant: "default", className:"bg-secondary text-secondary-foreground" });
+      }
+      return;
+    }
+    const { sectionId: animalSectionId, enclosureId: animalEnclosureId } = animalData;
+    updateAnimalBooleanFeature(zooId, siteId, animalSectionId, animalEnclosureId, animalId, featureName, value);
+    
+    setProcessedAnimals(prevAnimals => 
+        prevAnimals.map(animal => 
+          animal.id === animalId 
+            ? { ...animal, [featureName]: value } 
+            : animal
+        )
+      );
+  }, [processedAnimals, zooId, siteId, updateAnimalBooleanFeature, toast]);
+
+
+  const filteredSiteAnimals = processedAnimals.filter(animal => {
     const searchText = filterText.toLowerCase();
     if (!searchText) return true;
     return (
@@ -296,7 +385,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
           </Link>
         </Button>
         <div className="flex items-center gap-2">
-          {allSiteAnimals.length > 0 && ( 
+          {processedAnimals.length > 0 && ( 
             <Button variant="outline" onClick={handleExportCSV}>
               <Download className="mr-2 h-4 w-4" /> Export Filtered to CSV
             </Button>
@@ -325,7 +414,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
 
       <h1 className="text-4xl font-bold mb-2 tracking-tight text-gray-800">All Animals in {site.name}</h1>
       <p className="text-xl text-muted-foreground mb-4">
-        Total: {allSiteAnimals.length} animal(s) | Showing: {filteredSiteAnimals.length} after filter
+        Total Groups/Animals: {processedAnimals.length} | Displaying: {filteredSiteAnimals.length} after filter
       </p>
 
       <div className="mb-6 relative">
@@ -339,7 +428,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
         />
       </div>
       
-      {allSiteAnimals.length === 0 ? (
+      {processedAnimals.length === 0 ? (
         <p className="text-lg text-muted-foreground">This site has no animals listed for verification.</p>
       ) : filteredSiteAnimals.length === 0 ? (
         <p className="text-lg text-muted-foreground">No animals match your current filter criteria.</p>
@@ -347,9 +436,10 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
         <div className="space-y-4">
           {paginatedSiteAnimals.map(animal => (
             <AnimalListItem 
-              key={animal.id} 
+              key={animal.id + (animal.isGrouped ? '-grouped' : '')} // Ensure key is unique for grouped items
               animal={animal} 
               onToggleVerify={handleToggleVerify}
+              onToggleFeature={handleBooleanFeatureToggle}
               sectionName={animal.sectionName}
               enclosureName={animal.enclosureName}
             />
@@ -359,6 +449,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
         <AnimalTable 
             animals={paginatedSiteAnimals} 
             onToggleVerify={handleToggleVerify} 
+            onToggleFeature={handleBooleanFeatureToggle}
         />
       )}
 
