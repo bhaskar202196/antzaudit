@@ -48,15 +48,15 @@ export default function SiteCard({ site, zooId }: SiteCardProps) {
         </p>
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-2">
-        <Button asChild className="w-full sm:flex-1" variant="outline">
+        <Button asChild className="w-full sm:flex-1" variant="outline" size="sm">
           <Link href={`/zoos/${zooId}/sites/${site.id}/sections`}>
-            <Eye className="mr-2 h-5 w-5" />
+            <Eye className="mr-2 h-4 w-4" />
             View Sections
           </Link>
         </Button>
-        <Button asChild className="w-full sm:flex-1">
+        <Button asChild className="w-full sm:flex-1" size="sm">
           <Link href={`/zoos/${zooId}/sites/${site.id}/all-animals`}>
-            <PawPrint className="mr-2 h-5 w-5" />
+            <PawPrint className="mr-2 h-4 w-4" />
             View All Animals
           </Link>
         </Button>
