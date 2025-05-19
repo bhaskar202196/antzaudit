@@ -10,7 +10,7 @@ import { useZooData } from '@/contexts/zoo-data-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List, ChevronLeft, ChevronRight, Search, Printer } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
@@ -104,7 +104,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       if (currentSite) {
         const breadcrumbsData: BreadcrumbItem[] = [
           { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
-          { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/all-animals` }, // Link to this page itself or its parent view
+          { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/all-animals` }, 
           { label: "All Animals", href: `/zoos/${zooId}/sites/${siteId}/all-animals` },
         ];
         setBreadcrumbs(breadcrumbsData);
@@ -125,7 +125,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
         });
         setAllSiteAnimals(animals);
         setCurrentPage(1); 
-        setFilterText(''); // Reset filter when site data changes
+        setFilterText(''); 
 
       } else if (!isZooDataLoading) {
         setSite(undefined);
@@ -196,12 +196,12 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       animal.commonName?.toLowerCase().includes(searchText) ||
       animal.sectionName?.toLowerCase().includes(searchText) ||
       animal.enclosureName?.toLowerCase().includes(searchText) ||
-      animal.name?.toLowerCase().includes(searchText) // Also filter by animal name itself
+      animal.name?.toLowerCase().includes(searchText) 
     );
   });
 
   const handleExportCSV = useCallback(() => {
-    if (!filteredSiteAnimals || filteredSiteAnimals.length === 0) { // Use filtered animals for export
+    if (!filteredSiteAnimals || filteredSiteAnimals.length === 0) { 
       setTimeout(()=> {
       toast({ title: "No Data", description: "There are no animals matching the current filter to export.", variant: "destructive" });
       },0);
@@ -214,7 +214,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       return;
     }
     try {
-      const csvData = convertSiteAnimalsToCSV(filteredSiteAnimals, site.name, user); // Use filtered animals
+      const csvData = convertSiteAnimalsToCSV(filteredSiteAnimals, site.name, user); 
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -234,7 +234,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
        },0);
     }
-  }, [filteredSiteAnimals, site, toast, user]); // Depends on filteredSiteAnimals
+  }, [filteredSiteAnimals, site, toast, user]); 
   
   const totalPages = Math.ceil(filteredSiteAnimals.length / itemsPerPage);
   const paginatedSiteAnimals = filteredSiteAnimals.slice(
@@ -244,7 +244,11 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
 
   const handleFilterChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFilterText(event.target.value);
-    setCurrentPage(1); // Reset to first page on filter change
+    setCurrentPage(1); 
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
 
@@ -288,11 +292,14 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
           </Link>
         </Button>
         <div className="flex items-center gap-2">
-          {allSiteAnimals.length > 0 && ( // Show export if there's any data, regardless of filter
+          {allSiteAnimals.length > 0 && ( 
             <Button variant="outline" onClick={handleExportCSV}>
               <Download className="mr-2 h-4 w-4" /> Export Filtered to CSV
             </Button>
           )}
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="mr-2 h-4 w-4" /> Print
+          </Button>
            <Button 
             variant={viewMode === 'card' ? 'secondary' : 'outline'} 
             onClick={() => setViewMode('card')}

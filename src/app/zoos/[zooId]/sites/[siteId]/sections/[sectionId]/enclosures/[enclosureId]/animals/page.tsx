@@ -9,7 +9,7 @@ import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-conte
 import { useZooData } from '@/contexts/zoo-data-context'; 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react'; // Added LayoutGrid and List icons
+import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List, ChevronLeft, ChevronRight, Printer } from 'lucide-react'; // Added LayoutGrid and List icons
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
@@ -102,7 +102,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
               { label: currentEnclosure.name, href: `/zoos/${zooId}/sites/${siteId}/sections/${sectionId}/enclosures/${enclosureId}/animals` },
             ];
             setBreadcrumbs(breadcrumbsData);
-            setCurrentPage(1); // Reset page when enclosure data changes/loads
+            setCurrentPage(1); 
           } else if (!isZooDataLoading) {
             setEnclosure(undefined);
             setBreadcrumbs([ 
@@ -144,8 +144,6 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
     
     updateAnimalVerification(zooId, siteId, sectionId, enclosureId, animalId, isNowVerified, newVerifiedAt);
 
-    // Note: The enclosure state itself is updated by the context, triggering a re-render.
-    // The pagination will pick up the changes from the updated enclosure.animals.
 
     setTimeout(() => {
         const currentAnimal = getEnclosureByIdFromContext(zooId, siteId, sectionId, enclosureId)?.animals.find(a => a.id === animalId);
@@ -194,14 +192,18 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
         toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
       },0);
     }
-  }, [enclosure, toast, user]); // Add user to dependencies
+  }, [enclosure, toast, user]); 
+
+  const handlePrint = () => {
+    window.print();
+  };
   
   if (isZooDataLoading || zoo === null || (zoo && site === null) || (zoo && site && section === null) || (zoo && site && section && enclosure === null) ) { 
     return (
       <div>
-        <Skeleton className="h-10 w-64 mb-6" /> {/* Back button skeleton */}
-        <Skeleton className="h-10 w-3/4 mb-2" /> {/* Title skeleton */}
-        <Skeleton className="h-8 w-1/2 mb-2" /> {/* Subtitle skeleton */}
+        <Skeleton className="h-10 w-64 mb-6" /> 
+        <Skeleton className="h-10 w-3/4 mb-2" /> 
+        <Skeleton className="h-8 w-1/2 mb-2" /> 
         <Skeleton className="h-6 w-1/3 mb-2" />
         <Skeleton className="h-6 w-1/4 mb-8" />
         <div className="space-y-4">
@@ -249,6 +251,9 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
               <Download className="mr-2 h-4 w-4" /> Export to CSV
             </Button>
           )}
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="mr-2 h-4 w-4" /> Print
+          </Button>
            <Button 
             variant={viewMode === 'card' ? 'secondary' : 'outline'} 
             onClick={() => setViewMode('card')}
@@ -291,7 +296,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
               value={String(itemsPerPage)}
               onValueChange={(value) => {
                 setItemsPerPage(Number(value));
-                setCurrentPage(1); // Reset to first page
+                setCurrentPage(1); 
               }}
             >
               <SelectTrigger id={`enclosure-items-per-page-select-${enclosureId}`} className="w-[80px] h-9">
