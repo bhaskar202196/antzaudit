@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, CircleOff, PawPrint, Fingerprint, Disc3, Layers, Fence } from 'lucide-react';
+import { CheckCircle, CircleOff, PawPrint, Fingerprint, Disc3, Layers, Fence, Milestone, PackagePlus } from 'lucide-react'; // Added Milestone, PackagePlus
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 
@@ -28,7 +28,7 @@ interface AnimalTableProps {
 }
 
 export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProps) {
-  const showSectionEnclosureColumns = animals.length > 0 && animals[0].sectionName !== undefined;
+  const showSectionEnclosureColumns = animals.length > 0 && (animals[0].sectionName !== undefined || animals[0].enclosureName !== undefined);
 
   return (
     <Card className="overflow-hidden shadow-md">
@@ -36,16 +36,18 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
         <TableHeader>
             <TableRow>
             <TableHead className="w-[60px] hidden md:table-cell px-2">Image</TableHead>
-            <TableHead className="px-2">Name</TableHead>
-            <TableHead className="px-2">Species</TableHead>
-            <TableHead className="hidden sm:table-cell px-2">Common Name</TableHead>
-            {showSectionEnclosureColumns && <TableHead className="hidden lg:table-cell px-2">Section</TableHead>}
-            {showSectionEnclosureColumns && <TableHead className="hidden lg:table-cell px-2">Enclosure</TableHead>}
-            <TableHead className="hidden xl:table-cell px-2">Micro Chip</TableHead>
-            <TableHead className="hidden xl:table-cell px-2">Ring No.</TableHead>
-            <TableHead className="px-2">Status</TableHead>
-            <TableHead className="hidden xl:table-cell px-2">Verified At</TableHead>
-            <TableHead className="text-right px-2">Actions</TableHead>
+            <TableHead className="px-2 min-w-[120px]">Name</TableHead>
+            <TableHead className="px-2 min-w-[150px]">Species</TableHead>
+            <TableHead className="hidden sm:table-cell px-2 min-w-[120px]">Common Name</TableHead>
+            {showSectionEnclosureColumns && <TableHead className="hidden lg:table-cell px-2 min-w-[100px]">Section</TableHead>}
+            {showSectionEnclosureColumns && <TableHead className="hidden lg:table-cell px-2 min-w-[100px]">Enclosure</TableHead>}
+            <TableHead className="hidden md:table-cell px-2 min-w-[80px]">Gender</TableHead> {/* Gender added */}
+            <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">Micro Chip</TableHead>
+            <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">Ring No.</TableHead>
+            <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">Accession Type</TableHead> {/* Accession Type added */}
+            <TableHead className="px-2 min-w-[100px]">Status</TableHead>
+            <TableHead className="hidden xl:table-cell px-2 min-w-[150px]">Verified At</TableHead>
+            <TableHead className="text-right px-2 min-w-[100px]">Actions</TableHead>
             </TableRow>
         </TableHeader>
         <TableBody>
@@ -80,6 +82,11 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
                      {animal.enclosureName ? <span className="flex items-center"><Fence size={14} className="mr-1 text-muted-foreground"/> {animal.enclosureName}</span> : '-'}
                   </TableCell>
                 )}
+                <TableCell className="hidden md:table-cell px-2"> {/* Gender cell */}
+                    {animal.gender ? (
+                        <span className="flex items-center"><Milestone size={14} className="mr-1 text-muted-foreground"/> {animal.gender}</span>
+                    ) : '-'}
+                </TableCell>
                 <TableCell className="hidden xl:table-cell px-2">
                     {animal.microChip ? (
                         <span className="flex items-center"><Fingerprint size={14} className="mr-1 text-muted-foreground"/> {animal.microChip}</span>
@@ -88,6 +95,11 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
                 <TableCell className="hidden xl:table-cell px-2">
                     {animal.ringNumber ? (
                         <span className="flex items-center"><Disc3 size={14} className="mr-1 text-muted-foreground"/> {animal.ringNumber}</span>
+                    ) : '-'}
+                </TableCell>
+                 <TableCell className="hidden xl:table-cell px-2"> {/* Accession Type cell */}
+                    {animal.accessionType ? (
+                        <span className="flex items-center"><PackagePlus size={14} className="mr-1 text-muted-foreground"/> {animal.accessionType}</span>
                     ) : '-'}
                 </TableCell>
                 <TableCell className="px-2">
