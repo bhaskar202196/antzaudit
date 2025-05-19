@@ -12,6 +12,7 @@ import {
   Fence // For Enclosure
 } from 'lucide-react'; 
 import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface AnimalListItemProps {
   animal: Animal;
@@ -20,13 +21,13 @@ interface AnimalListItemProps {
   enclosureName?: string; // New optional prop
 }
 
-const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: string | number | null, fullWidth?: boolean }> = ({ icon: Icon, label, value, fullWidth = false }) => {
+const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: string | number | null, fullWidth?: boolean, className?: string }> = ({ icon: Icon, label, value, fullWidth = false, className = '' }) => {
   if (value === null || value === undefined) return null;
   const displayValue = String(value).trim();
   if (displayValue === '') return null;
 
   return (
-    <div className={`flex items-center text-xs text-muted-foreground ${fullWidth ? 'md:col-span-2' : ''}`}>
+    <div className={`flex items-center text-xs text-muted-foreground ${fullWidth ? 'md:col-span-2' : ''} ${className}`}>
       <Icon className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
       <span className="font-medium">{label}:</span>&nbsp;
       <span className="truncate" title={displayValue}>{displayValue}</span>
@@ -42,7 +43,9 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
   const formatDate = (dateString?: string) => {
     if (!dateString) return undefined;
     try {
-      return new Date(dateString).toLocaleDateString();
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString; // Return original string if date is invalid
+      return date.toLocaleDateString();
     } catch (e) {
       return dateString; 
     }
@@ -99,29 +102,44 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
             )}
           </CardHeader>
           
-          <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-3">
-            {sectionName && <DetailItem icon={Layers} label="Section" value={sectionName} />}
-            {enclosureName && <DetailItem icon={Fence} label="Enclosure" value={enclosureName} />}
-            <DetailItem icon={Milestone} label="Gender" value={animal.gender} />
-            
-            {animal.identifierType && animal.identifierValue && (
-              <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} fullWidth />
-            )}
-            
-            {animal.breedName && (
-              <DetailItem icon={Dna} label="Breed" value={animal.breedName} />
-            )}
-            
-            {animal.morphName && (
-              <DetailItem icon={VenetianMask} label="Morph" value={animal.morphName} />
-            )}
+          <CardContent className="p-0 mt-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              {sectionName && <DetailItem icon={Layers} label="Section" value={sectionName} />}
+              {enclosureName && <DetailItem icon={Fence} label="Enclosure" value={enclosureName} />}
+              <DetailItem icon={Milestone} label="Gender" value={animal.gender} />
+              
+              {animal.identifierType && animal.identifierValue && (
+                <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} fullWidth />
+              )}
+              
+              {animal.breedName && (
+                <DetailItem icon={Dna} label="Breed" value={animal.breedName} />
+              )}
+              
+              {animal.morphName && (
+                <DetailItem icon={VenetianMask} label="Morph" value={animal.morphName} />
+              )}
 
-            <DetailItem icon={WeightIcon} label="Weight" value={animal.weight} />
-            <DetailItem icon={Info} label="Age" value={animal.age} />
-            <DetailItem icon={CalendarDays} label="Accession Date" value={formatDate(animal.accessionDate)} />
-            <DetailItem icon={PackagePlus} label="Accession Type" value={animal.accessionType} />
-            <DetailItem icon={CalendarDays} label="Birth Date" value={formatDate(animal.birthDate)} />
-            <DetailItem icon={CalendarDays} label="Added on Antz" value={formatDate(animal.addedOnAntz)} />
+              <DetailItem icon={WeightIcon} label="Weight" value={animal.weight} />
+            </div>
+
+            <Accordion type="single" collapsible className="w-full mt-3">
+              <AccordionItem value="additional-details">
+                <AccordionTrigger className="text-xs hover:no-underline py-2 px-1 -ml-1 flex justify-start">
+                  <div className="flex items-center text-muted-foreground">
+                    <Info className="mr-2 h-4 w-4" /> 
+                    <span>Additional Details</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-2 pb-0 text-xs space-y-1.5 pl-2">
+                  <DetailItem icon={Info} label="Age" value={animal.age} />
+                  <DetailItem icon={PackagePlus} label="Accession Type" value={animal.accessionType} />
+                  <DetailItem icon={CalendarDays} label="Accession Date" value={formatDate(animal.accessionDate)} />
+                  <DetailItem icon={CalendarDays} label="Birth Date" value={formatDate(animal.birthDate)} />
+                  <DetailItem icon={CalendarDays} label="Added on Antz" value={formatDate(animal.addedOnAntz)} />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </CardContent>
         </div>
 
