@@ -1,3 +1,4 @@
+
 // src/components/zoo/animal-list-item.tsx
 "use client";
 import type { Animal } from '@/lib/types';
@@ -6,27 +7,34 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { 
   PawPrint, CheckCircle, CircleOff, Tag, Clock, Disc3, Fingerprint, Milestone, 
-  Scale, CalendarDays, BadgeHelp, PackagePlus, Info, WeightIcon, VenetianMask, Dna
+  Scale, CalendarDays, BadgeHelp, PackagePlus, Info, WeightIcon, VenetianMask, Dna,
+  Layers, // For Section
+  Fence // For Enclosure
 } from 'lucide-react'; 
 import { Badge } from '@/components/ui/badge';
 
 interface AnimalListItemProps {
   animal: Animal;
   onToggleVerify: (animalId: string) => void;
+  sectionName?: string;   // New optional prop
+  enclosureName?: string; // New optional prop
 }
 
 const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: string | number | null, fullWidth?: boolean }> = ({ icon: Icon, label, value, fullWidth = false }) => {
-  if (!value && typeof value !== 'number') return null; // Also check for empty string for value
+  if (!value && typeof value !== 'number' && typeof value !== 'string') return null;
+  const displayValue = String(value).trim();
+  if (displayValue === '') return null;
+
   return (
     <div className={`flex items-center text-xs text-muted-foreground ${fullWidth ? 'md:col-span-2' : ''}`}>
       <Icon className="mr-2 h-3.5 w-3.5 flex-shrink-0" />
       <span className="font-medium">{label}:</span>&nbsp;
-      <span className="truncate" title={String(value)}>{String(value)}</span>
+      <span className="truncate" title={displayValue}>{displayValue}</span>
     </div>
   );
 };
 
-export default function AnimalListItem({ animal, onToggleVerify }: AnimalListItemProps) {
+export default function AnimalListItem({ animal, onToggleVerify, sectionName, enclosureName }: AnimalListItemProps) {
   const verificationDate = animal.verified && animal.verifiedAt 
     ? new Date(animal.verifiedAt).toLocaleString() 
     : null;
@@ -36,7 +44,7 @@ export default function AnimalListItem({ animal, onToggleVerify }: AnimalListIte
     try {
       return new Date(dateString).toLocaleDateString();
     } catch (e) {
-      return dateString; // return original if parsing fails
+      return dateString; 
     }
   }
 
@@ -92,6 +100,8 @@ export default function AnimalListItem({ animal, onToggleVerify }: AnimalListIte
           </CardHeader>
           
           <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-3">
+            {sectionName && <DetailItem icon={Layers} label="Section" value={sectionName} />}
+            {enclosureName && <DetailItem icon={Fence} label="Enclosure" value={enclosureName} />}
             <DetailItem icon={Milestone} label="Gender" value={animal.gender} />
             {animal.identifierType && animal.identifierValue && (
               <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} fullWidth />

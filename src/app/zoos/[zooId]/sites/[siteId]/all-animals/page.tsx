@@ -4,12 +4,13 @@
 import type { Animal, Site, Zoo, User } from '@/lib/types';
 import AnimalListItem from '@/components/zoo/animal-list-item';
 import AnimalTable from '@/components/zoo/animal-table';
-import { use, useEffect, useState, useCallback } from 'react';
+import { use, useEffect, useState, useCallback, type ChangeEvent } from 'react';
 import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-context';
 import { useZooData } from '@/contexts/zoo-data-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
@@ -89,6 +90,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [filterText, setFilterText] = useState('');
   
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
@@ -102,12 +104,11 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       if (currentSite) {
         const breadcrumbsData: BreadcrumbItem[] = [
           { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
-          { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/all-animals` },
+          { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/all-animals` }, // Link to this page itself or its parent view
           { label: "All Animals", href: `/zoos/${zooId}/sites/${siteId}/all-animals` },
         ];
         setBreadcrumbs(breadcrumbsData);
 
-        // Collect all animals from this site
         const animals: SiteAnimalViewData[] = [];
         currentSite.sections.forEach(section => {
           section.enclosures.forEach(enclosure => {
@@ -123,7 +124,8 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
           });
         });
         setAllSiteAnimals(animals);
-        setCurrentPage(1); // Reset page when site data changes/loads
+        setCurrentPage(1); 
+        setFilterText(''); // Reset filter when site data changes
 
       } else if (!isZooDataLoading) {
         setSite(undefined);
@@ -152,7 +154,6 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
     
     updateAnimalVerification(zooId, siteId, animalSectionId, animalEnclosureId, animalId, isNowVerified, newVerifiedAt);
 
-    // Optimistically update local state or refetch for consistency
      setAllSiteAnimals(prevAnimals => 
         prevAnimals.map(animal => 
           animal.id === animalId 
@@ -176,7 +177,6 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
                 className: currentAnimalFromEnclosure.verified ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground'
             });
         } else {
-            // Fallback toast if direct refetch is not immediately available
              toast({
                 title: `Animal ${isNowVerified ? 'Verified' : 'Unverified'}`,
                 description: `${animalData.name} status updated.`,
@@ -189,9 +189,9 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
   }, [allSiteAnimals, zooId, siteId, updateAnimalVerification, toast, getEnclosureById]);
 
   const handleExportCSV = useCallback(() => {
-    if (!allSiteAnimals || allSiteAnimals.length === 0) {
+    if (!filteredSiteAnimals || filteredSiteAnimals.length === 0) { // Use filtered animals for export
       setTimeout(()=> {
-      toast({ title: "No Data", description: "There are no animals in this site to export.", variant: "destructive" });
+      toast({ title: "No Data", description: "There are no animals matching the current filter to export.", variant: "destructive" });
       },0);
       return;
     }
@@ -202,7 +202,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       return;
     }
     try {
-      const csvData = convertSiteAnimalsToCSV(allSiteAnimals, site.name, user);
+      const csvData = convertSiteAnimalsToCSV(filteredSiteAnimals, site.name, user); // Use filtered animals
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -214,7 +214,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       setTimeout(()=> {
-      toast({ title: "Export Successful", description: `All animal data for site ${site.name} has been downloaded.` });
+      toast({ title: "Export Successful", description: `Filtered animal data for site ${site.name} has been downloaded.` });
       },0);
     } catch (error) {
       console.error("Failed to export site animals CSV:", error);
@@ -222,21 +222,38 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
        },0);
     }
-  }, [allSiteAnimals, site, toast, user]);
+  }, [filteredSiteAnimals, site, toast, user]); // Depends on filteredSiteAnimals
   
-  // Pagination logic
-  const totalPages = Math.ceil(allSiteAnimals.length / itemsPerPage);
-  const paginatedSiteAnimals = allSiteAnimals.slice(
+  const filteredSiteAnimals = allSiteAnimals.filter(animal => {
+    const searchText = filterText.toLowerCase();
+    if (!searchText) return true;
+    return (
+      animal.species?.toLowerCase().includes(searchText) ||
+      animal.commonName?.toLowerCase().includes(searchText) ||
+      animal.sectionName?.toLowerCase().includes(searchText) ||
+      animal.enclosureName?.toLowerCase().includes(searchText) ||
+      animal.name?.toLowerCase().includes(searchText) // Also filter by animal name itself
+    );
+  });
+  
+  const totalPages = Math.ceil(filteredSiteAnimals.length / itemsPerPage);
+  const paginatedSiteAnimals = filteredSiteAnimals.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
+  const handleFilterChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setFilterText(event.target.value);
+    setCurrentPage(1); // Reset to first page on filter change
+  };
+
+
   if (isZooDataLoading || zoo === null || (zoo && site === null) ) { 
     return (
       <div>
-        <Skeleton className="h-10 w-64 mb-6" /> {/* Back button skeleton */}
-        <Skeleton className="h-10 w-3/4 mb-2" /> {/* Title skeleton */}
-        <Skeleton className="h-8 w-1/2 mb-2" /> {/* Subtitle skeleton */}
+        <Skeleton className="h-10 w-64 mb-6" /> 
+        <Skeleton className="h-10 w-3/4 mb-2" /> 
+        <Skeleton className="h-8 w-1/2 mb-2" /> 
         <Skeleton className="h-6 w-1/3 mb-8" />
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
@@ -271,9 +288,9 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
           </Link>
         </Button>
         <div className="flex items-center gap-2">
-          {allSiteAnimals.length > 0 && (
+          {allSiteAnimals.length > 0 && ( // Show export if there's any data, regardless of filter
             <Button variant="outline" onClick={handleExportCSV}>
-              <Download className="mr-2 h-4 w-4" /> Export All to CSV
+              <Download className="mr-2 h-4 w-4" /> Export Filtered to CSV
             </Button>
           )}
            <Button 
@@ -296,18 +313,42 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       </div>
 
       <h1 className="text-4xl font-bold mb-2 tracking-tight text-gray-800">All Animals in {site.name}</h1>
-      <p className="text-xl text-muted-foreground mb-8">Total: {allSiteAnimals.length} animal(s) for verification</p>
+      <p className="text-xl text-muted-foreground mb-4">
+        Total: {allSiteAnimals.length} animal(s) | Showing: {filteredSiteAnimals.length} after filter
+      </p>
+
+      <div className="mb-6 relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Filter by Animal Name, Species, Common Name, Section, or Enclosure..."
+          value={filterText}
+          onChange={handleFilterChange}
+          className="pl-10 w-full"
+        />
+      </div>
       
       {allSiteAnimals.length === 0 ? (
-        <p className="text-lg text-muted-foreground">This site has no animals listed for verification across its sections and enclosures.</p>
+        <p className="text-lg text-muted-foreground">This site has no animals listed for verification.</p>
+      ) : filteredSiteAnimals.length === 0 ? (
+        <p className="text-lg text-muted-foreground">No animals match your current filter criteria.</p>
       ) : viewMode === 'card' ? (
         <div className="space-y-4">
           {paginatedSiteAnimals.map(animal => (
-            <AnimalListItem key={animal.id} animal={animal} onToggleVerify={handleToggleVerify} />
+            <AnimalListItem 
+              key={animal.id} 
+              animal={animal} 
+              onToggleVerify={handleToggleVerify}
+              sectionName={animal.sectionName}
+              enclosureName={animal.enclosureName}
+            />
           ))}
         </div>
       ) : (
-        <AnimalTable animals={paginatedSiteAnimals} onToggleVerify={handleToggleVerify} />
+        <AnimalTable 
+            animals={paginatedSiteAnimals} 
+            onToggleVerify={handleToggleVerify} 
+        />
       )}
 
       {totalPages > 1 && (
@@ -318,7 +359,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
               value={String(itemsPerPage)}
               onValueChange={(value) => {
                 setItemsPerPage(Number(value));
-                setCurrentPage(1); // Reset to first page
+                setCurrentPage(1); 
               }}
             >
               <SelectTrigger id={`all-animals-items-per-page-select-${siteId}`} className="w-[80px] h-9">
