@@ -32,36 +32,29 @@ type ViewMode = 'card' | 'table';
 
 // Helper function to convert site animal data to CSV format
 const convertSiteAnimalsToCSV = (animals: DisplayAnimal[], siteName: string, currentUser: User | null): string => {
-  // Note: CSV export will still list individual animals if they were grouped in the UI.
-  // This export reflects the raw, ungrouped data structure if DisplayAnimal holds originalAnimalIds.
-  // For now, this function assumes 'animals' param might be grouped, but export needs to be of individual underlying animals.
-  // This part needs careful thought: if we export the *displayed* (grouped) list, counts are fine.
-  // If we want to export underlying individual animals, we'd need to expand any grouped entries.
-  // For now, let's assume the CSV reflects the DISPLAYED state, including counts for grouped animals.
-
   const headers = [
-    'Section Name', 'Enclosure Name', 
-    'Animal ID (Primary)', 'Animal Name', 'Species', 'Common Name', 'Gender', 
-    'Animal Count', // Added Animal Count
+    'Section Name', 'Enclosure Name',
+    'Animal ID (Primary)', 'Animal Name', 'Species', 'Common Name', 'Gender',
+    'Animal Count',
     'Verified', 'Verified At', 'Who Verified',
-    'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue', 
-    'BreedName', 'MorphName', 'Weight', 'Age', 
+    'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue',
+    'BreedName', 'MorphName', 'Weight', 'Age',
     'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row',
     'Night Cell Presence', 'Air Conditioning', 'Camera'
   ];
-  
+
   const rows = animals.map(animal => [
     animal.sectionName, animal.enclosureName,
     animal.id, animal.name, animal.species, animal.commonName, animal.gender,
-    animal.animalCount, // Use animalCount
+    animal.animalCount,
     animal.verified ? 'Yes' : 'No',
     animal.verified && animal.verifiedAt ? new Date(animal.verifiedAt).toLocaleString() : '',
-    animal.verified && currentUser && !animal.isGrouped ? currentUser.email : '', // Only show verifier if not grouped
+    animal.verified && currentUser ? currentUser.email : '',
     animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
     animal.breedName, animal.morphName, animal.weight, animal.age,
     animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber,
-    animal.nightCellPresence ? 'Yes' : 'No', 
-    animal.airConditioning ? 'Yes' : 'No',  
+    animal.nightCellPresence ? 'Yes' : 'No',
+    animal.airConditioning ? 'Yes' : 'No',
     animal.camera ? 'Yes' : 'No'
   ]);
 
@@ -78,13 +71,12 @@ const convertSiteAnimalsToCSV = (animals: DisplayAnimal[], siteName: string, cur
     headers.join(','),
     ...rows.map(row => row.map(escapeField).join(','))
   ].join('\n');
-  
+
   return csvContent;
 };
 
 const groupAnimalsForDisplay = (animals: Animal[], siteData: Site): DisplayAnimal[] => {
   const animalsWithContext = animals.map(a => {
-    // Find section and enclosure for each animal to get their names
     let sectionName = "N/A", enclosureName = "N/A", sectionId = "N/A", enclosureId = "N/A";
     for (const sec of siteData.sections) {
       for (const enc of sec.enclosures) {
@@ -142,7 +134,7 @@ const groupAnimalsForDisplay = (animals: Animal[], siteData: Site): DisplayAnima
     }
     result.push({ ...currentGroupAnimal, animalCount: count, isGrouped: count > 1, originalAnimalIds: count > 1 ? [...currentGroupOriginalIds] : undefined });
   }
-  
+
   return result.sort((a, b) => {
     if (a.sectionName.localeCompare(b.sectionName) !== 0) {
       return a.sectionName.localeCompare(b.sectionName);
@@ -155,14 +147,14 @@ const groupAnimalsForDisplay = (animals: Animal[], siteData: Site): DisplayAnima
 };
 
 
-export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPageProps) {
+export default function AllAnimalsPage({ params: paramsPromise }: { params: Promise<{ zooId: string, siteId: string}> }) {
   const params = use(paramsPromise);
   const { zooId, siteId } = params;
 
-  const { 
+  const {
     getSiteById: getSiteByIdFromContext,
     getZooById: getZooByIdFromContext,
-    updateAnimalVerification, 
+    updateAnimalVerification,
     updateAnimalBooleanFeature,
     isLoading: isZooDataLoading,
   } = useZooData();
@@ -175,7 +167,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [filterText, setFilterText] = useState('');
-  
+
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
 
@@ -188,7 +180,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       if (currentSite) {
         const breadcrumbsData: BreadcrumbItem[] = [
           { label: currentZoo.name, href: `/zoos/${zooId}/sites` },
-          { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/all-animals` }, 
+          { label: currentSite.name, href: `/zoos/${zooId}/sites/${siteId}/all-animals` },
           { label: "All Animals", href: `/zoos/${zooId}/sites/${siteId}/all-animals` },
         ];
         setBreadcrumbs(breadcrumbsData);
@@ -199,11 +191,11 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
             allAnimalsFromSite.push(...enclosure.animals);
           });
         });
-        
+
         const grouped = groupAnimalsForDisplay(allAnimalsFromSite, currentSite);
         setProcessedAnimals(grouped);
-        setCurrentPage(1); 
-        setFilterText(''); 
+        setCurrentPage(1);
+        setFilterText('');
 
       } else if (!isZooDataLoading) {
         setSite(undefined);
@@ -222,28 +214,22 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
 
   const handleToggleVerify = useCallback((animalId: string) => {
     const animalData = processedAnimals.find(a => a.id === animalId);
-    if (!animalData || animalData.isGrouped) { // Do not allow verifying grouped animals
-      if (animalData?.isGrouped) {
-        toast({ title: "Action Disabled", description: "Verification actions are disabled for grouped animals.", variant: "default", className:"bg-secondary text-secondary-foreground" });
-      }
-      return;
-    }
+    if (!animalData) return;
 
     const { sectionId: animalSectionId, enclosureId: animalEnclosureId } = animalData;
     const isNowVerified = !animalData.verified;
     const newVerifiedAt = isNowVerified ? new Date().toISOString() : undefined;
-    
+
     updateAnimalVerification(zooId, siteId, animalSectionId, animalEnclosureId, animalId, isNowVerified, newVerifiedAt);
 
-    // Optimistic update for the displayed list
-    setProcessedAnimals(prevAnimals => 
-        prevAnimals.map(animal => 
-          animal.id === animalId 
-            ? { ...animal, verified: isNowVerified, verifiedAt: newVerifiedAt } 
+    setProcessedAnimals(prevAnimals =>
+        prevAnimals.map(animal =>
+          animal.id === animalId
+            ? { ...animal, verified: isNowVerified, verifiedAt: newVerifiedAt }
             : animal
         )
       );
-    
+
     setTimeout(() => {
         let toastTitle = `Animal ${isNowVerified ? 'Verified' : 'Unverified'}`;
         let toastDescription = `${animalData.name} (${animalData.species}) status updated.`;
@@ -253,7 +239,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
         toast({
             title: toastTitle,
             description: toastDescription,
-            variant: isNowVerified ? 'default' : 'default', 
+            variant: isNowVerified ? 'default' : 'default',
             className: isNowVerified ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground'
         });
     }, 0);
@@ -262,19 +248,15 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
 
   const handleBooleanFeatureToggle = useCallback((animalId: string, featureName: 'nightCellPresence' | 'airConditioning' | 'camera', value: boolean) => {
     const animalData = processedAnimals.find(a => a.id === animalId);
-     if (!animalData || animalData.isGrouped) {
-      if (animalData?.isGrouped) {
-        toast({ title: "Action Disabled", description: `Toggling ${featureName} is disabled for grouped animals.`, variant: "default", className:"bg-secondary text-secondary-foreground" });
-      }
-      return;
-    }
+     if (!animalData) return;
+
     const { sectionId: animalSectionId, enclosureId: animalEnclosureId } = animalData;
     updateAnimalBooleanFeature(zooId, siteId, animalSectionId, animalEnclosureId, animalId, featureName, value);
-    
-    setProcessedAnimals(prevAnimals => 
-        prevAnimals.map(animal => 
-          animal.id === animalId 
-            ? { ...animal, [featureName]: value } 
+
+    setProcessedAnimals(prevAnimals =>
+        prevAnimals.map(animal =>
+          animal.id === animalId
+            ? { ...animal, [featureName]: value }
             : animal
         )
       );
@@ -289,12 +271,12 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       animal.commonName?.toLowerCase().includes(searchText) ||
       animal.sectionName?.toLowerCase().includes(searchText) ||
       animal.enclosureName?.toLowerCase().includes(searchText) ||
-      animal.name?.toLowerCase().includes(searchText) 
+      animal.name?.toLowerCase().includes(searchText)
     );
   });
 
   const handleExportCSV = useCallback(() => {
-    if (!filteredSiteAnimals || filteredSiteAnimals.length === 0) { 
+    if (!filteredSiteAnimals || filteredSiteAnimals.length === 0) {
       setTimeout(()=> {
       toast({ title: "No Data", description: "There are no animals matching the current filter to export.", variant: "destructive" });
       },0);
@@ -307,7 +289,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       return;
     }
     try {
-      const csvData = convertSiteAnimalsToCSV(filteredSiteAnimals, site.name, user); 
+      const csvData = convertSiteAnimalsToCSV(filteredSiteAnimals, site.name, user);
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -327,8 +309,8 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       toast({ title: "Export Failed", description: "Could not generate CSV file. Please try again.", variant: "destructive" });
        },0);
     }
-  }, [filteredSiteAnimals, site, toast, user]); 
-  
+  }, [filteredSiteAnimals, site, toast, user]);
+
   const totalPages = Math.ceil(filteredSiteAnimals.length / itemsPerPage);
   const paginatedSiteAnimals = filteredSiteAnimals.slice(
     (currentPage - 1) * itemsPerPage,
@@ -337,7 +319,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
 
   const handleFilterChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFilterText(event.target.value);
-    setCurrentPage(1); 
+    setCurrentPage(1);
   };
 
   const handlePrint = () => {
@@ -345,12 +327,12 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
   };
 
 
-  if (isZooDataLoading || zoo === null || (zoo && site === null) ) { 
+  if (isZooDataLoading || zoo === null || (zoo && site === null) ) {
     return (
       <div>
-        <Skeleton className="h-10 w-64 mb-6" /> 
-        <Skeleton className="h-10 w-3/4 mb-2" /> 
-        <Skeleton className="h-8 w-1/2 mb-2" /> 
+        <Skeleton className="h-10 w-64 mb-6" />
+        <Skeleton className="h-10 w-3/4 mb-2" />
+        <Skeleton className="h-8 w-1/2 mb-2" />
         <Skeleton className="h-6 w-1/3 mb-8" />
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
@@ -361,7 +343,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
     );
   }
 
-  if (zoo === undefined || site === undefined) { 
+  if (zoo === undefined || site === undefined) {
      return (
       <div className="flex flex-col items-center justify-center text-center py-10">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
@@ -385,7 +367,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
           </Link>
         </Button>
         <div className="flex items-center gap-2">
-          {processedAnimals.length > 0 && ( 
+          {processedAnimals.length > 0 && (
             <Button variant="outline" onClick={handleExportCSV}>
               <Download className="mr-2 h-4 w-4" /> Export Filtered to CSV
             </Button>
@@ -393,16 +375,16 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="mr-2 h-4 w-4" /> Print
           </Button>
-           <Button 
-            variant={viewMode === 'card' ? 'secondary' : 'outline'} 
+           <Button
+            variant={viewMode === 'card' ? 'secondary' : 'outline'}
             onClick={() => setViewMode('card')}
             size="icon"
             aria-label="Card View"
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
-          <Button 
-            variant={viewMode === 'table' ? 'secondary' : 'outline'} 
+          <Button
+            variant={viewMode === 'table' ? 'secondary' : 'outline'}
             onClick={() => setViewMode('table')}
             size="icon"
             aria-label="Table View"
@@ -427,7 +409,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
           className="pl-10 w-full"
         />
       </div>
-      
+
       {processedAnimals.length === 0 ? (
         <p className="text-lg text-muted-foreground">This site has no animals listed for verification.</p>
       ) : filteredSiteAnimals.length === 0 ? (
@@ -435,9 +417,9 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
       ) : viewMode === 'card' ? (
         <div className="space-y-4">
           {paginatedSiteAnimals.map(animal => (
-            <AnimalListItem 
+            <AnimalListItem
               key={animal.id + (animal.isGrouped ? '-grouped' : '')} // Ensure key is unique for grouped items
-              animal={animal} 
+              animal={animal}
               onToggleVerify={handleToggleVerify}
               onToggleFeature={handleBooleanFeatureToggle}
               sectionName={animal.sectionName}
@@ -446,9 +428,9 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
           ))}
         </div>
       ) : (
-        <AnimalTable 
-            animals={paginatedSiteAnimals} 
-            onToggleVerify={handleToggleVerify} 
+        <AnimalTable
+            animals={paginatedSiteAnimals}
+            onToggleVerify={handleToggleVerify}
             onToggleFeature={handleBooleanFeatureToggle}
         />
       )}
@@ -461,7 +443,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
               value={String(itemsPerPage)}
               onValueChange={(value) => {
                 setItemsPerPage(Number(value));
-                setCurrentPage(1); 
+                setCurrentPage(1);
               }}
             >
               <SelectTrigger id={`all-animals-items-per-page-select-${siteId}`} className="w-[80px] h-9">

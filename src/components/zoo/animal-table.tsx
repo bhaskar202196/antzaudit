@@ -33,9 +33,8 @@ interface AnimalTableProps {
 
 export default function AnimalTable({ animals, onToggleVerify, onToggleFeature }: AnimalTableProps) {
   const showSectionEnclosureColumns = animals.length > 0 && (animals[0].sectionName !== undefined || animals[0].enclosureName !== undefined);
-  
+
   const handleFeatureToggle = (animal: DisplayAnimal, featureName: 'nightCellPresence' | 'airConditioning' | 'camera', value: boolean) => {
-    if (animal.isGrouped) return;
     onToggleFeature(animal.id, featureName, value);
   };
 
@@ -97,38 +96,32 @@ export default function AnimalTable({ animals, onToggleVerify, onToggleFeature }
                     animal.animalCount
                   )}
                 </TableCell>
-                <TableCell className={`hidden lg:table-cell px-2 text-center ${animal.isGrouped ? 'opacity-50' : ''}`}>
+                <TableCell className="hidden lg:table-cell px-2 text-center">
                     <Switch
                         checked={!!animal.nightCellPresence}
                         onCheckedChange={(value) => handleFeatureToggle(animal, 'nightCellPresence', value)}
                         aria-label="Night Cell Presence"
                         className="mx-auto"
-                        disabled={animal.isGrouped}
-                        title={animal.isGrouped ? "Disabled for grouped animals" : ""}
                     />
                 </TableCell>
-                <TableCell className={`hidden lg:table-cell px-2 text-center ${animal.isGrouped ? 'opacity-50' : ''}`}>
+                <TableCell className="hidden lg:table-cell px-2 text-center">
                     <Switch
                         checked={!!animal.airConditioning}
                         onCheckedChange={(value) => handleFeatureToggle(animal, 'airConditioning', value)}
                         aria-label="Air Conditioning"
                         className="mx-auto"
-                        disabled={animal.isGrouped}
-                        title={animal.isGrouped ? "Disabled for grouped animals" : ""}
                     />
                 </TableCell>
-                <TableCell className={`hidden lg:table-cell px-2 text-center ${animal.isGrouped ? 'opacity-50' : ''}`}>
+                <TableCell className="hidden lg:table-cell px-2 text-center">
                     <Switch
                         checked={!!animal.camera}
                         onCheckedChange={(value) => handleFeatureToggle(animal, 'camera', value)}
                         aria-label="Camera"
                         className="mx-auto"
-                        disabled={animal.isGrouped}
-                        title={animal.isGrouped ? "Disabled for grouped animals" : ""}
                     />
                 </TableCell>
                 <TableCell className="px-2">
-                {!animal.isGrouped && (animal.verified ? (
+                {animal.verified ? (
                     <Badge variant="default" className="bg-accent text-accent-foreground whitespace-nowrap">
                     <CheckCircle size={14} className="mr-1" /> Verified
                     </Badge>
@@ -136,8 +129,8 @@ export default function AnimalTable({ animals, onToggleVerify, onToggleFeature }
                     <Badge variant="secondary" className="whitespace-nowrap">
                     <CircleOff size={14} className="mr-1" /> Not Verified
                     </Badge>
-                ))}
-                {animal.isGrouped && (
+                )}
+                {animal.isGrouped && !animal.verified && (
                      <Badge variant="outline" className="whitespace-nowrap border-blue-500 text-blue-700">
                         Grouped
                     </Badge>
@@ -149,8 +142,7 @@ export default function AnimalTable({ animals, onToggleVerify, onToggleFeature }
                     variant={animal.verified ? "outline" : "default"}
                     size="sm"
                     className={`whitespace-nowrap ${!animal.verified ? 'bg-accent text-accent-foreground hover:bg-accent/90 focus-visible:ring-accent' : 'border-accent text-accent hover:bg-accent/10 focus-visible:ring-accent'}`}
-                    disabled={animal.isGrouped}
-                    title={animal.isGrouped ? "Verification disabled for grouped animals" : (animal.verified ? "Unverify Animal" : "Verify Animal")}
+                    title={animal.verified ? "Unverify Animal" : "Verify Animal"}
                 >
                     {animal.verified ? (
                         <><CircleOff size={16} className="mr-1 sm:mr-2" /> <span className="hidden sm:inline">Unverify</span></>
@@ -159,7 +151,7 @@ export default function AnimalTable({ animals, onToggleVerify, onToggleFeature }
                     )}
                 </Button>
                 </TableCell>
-                
+
                 {showSectionEnclosureColumns ? (
                   <TableCell className="hidden lg:table-cell px-2">
                     {animal.sectionName ? <span className="flex items-center"><Layers size={14} className="mr-1 text-muted-foreground"/> {animal.sectionName}</span> : '-'}
@@ -171,7 +163,7 @@ export default function AnimalTable({ animals, onToggleVerify, onToggleFeature }
                   </TableCell>
                 ) : null}
                 <TableCell className="hidden xl:table-cell px-2">
-                {!animal.isGrouped && animal.verified && animal.verifiedAt
+                {animal.verified && animal.verifiedAt
                     ? new Date(animal.verifiedAt).toLocaleString()
                     : '-'}
                 </TableCell>
