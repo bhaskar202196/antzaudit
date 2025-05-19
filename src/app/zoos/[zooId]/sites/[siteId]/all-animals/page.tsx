@@ -1,3 +1,4 @@
+
 // src/app/zoos/[zooId]/sites/[siteId]/all-animals/page.tsx
 "use client";
 import type { Animal, Site, Zoo, User } from '@/lib/types';
@@ -8,7 +9,7 @@ import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-conte
 import { useZooData } from '@/contexts/zoo-data-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
@@ -26,6 +27,7 @@ interface SiteAnimalViewData extends Animal {
 }
 
 type ViewMode = 'card' | 'table';
+const ITEMS_PER_PAGE = 10;
 
 // Helper function to convert site animal data to CSV format
 const convertSiteAnimalsToCSV = (animals: SiteAnimalViewData[], siteName: string, currentUser: User | null): string => {
@@ -84,6 +86,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
   const [site, setSite] = useState<Site | null | undefined>(null);
   const [allSiteAnimals, setAllSiteAnimals] = useState<SiteAnimalViewData[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('card');
+  const [currentPage, setCurrentPage] = useState(1);
   
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
@@ -118,6 +121,7 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
           });
         });
         setAllSiteAnimals(animals);
+        setCurrentPage(1); // Reset page when site data changes/loads
 
       } else if (!isZooDataLoading) {
         setSite(undefined);
@@ -218,6 +222,13 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
     }
   }, [allSiteAnimals, site, toast, user]);
   
+  // Pagination logic
+  const totalPages = Math.ceil(allSiteAnimals.length / ITEMS_PER_PAGE);
+  const paginatedSiteAnimals = allSiteAnimals.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   if (isZooDataLoading || zoo === null || (zoo && site === null) ) { 
     return (
       <div>
@@ -289,14 +300,40 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
         <p className="text-lg text-muted-foreground">This site has no animals listed for verification across its sections and enclosures.</p>
       ) : viewMode === 'card' ? (
         <div className="space-y-4">
-          {allSiteAnimals.map(animal => (
+          {paginatedSiteAnimals.map(animal => (
             <AnimalListItem key={animal.id} animal={animal} onToggleVerify={handleToggleVerify} />
           ))}
         </div>
       ) : (
-        // Pass the SiteAnimalViewData directly to AnimalTable, it only uses Animal props
-        <AnimalTable animals={allSiteAnimals} onToggleVerify={handleToggleVerify} />
+        <AnimalTable animals={paginatedSiteAnimals} onToggleVerify={handleToggleVerify} />
+      )}
+
+      {allSiteAnimals.length > ITEMS_PER_PAGE && (
+        <div className="mt-8 flex justify-center items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
       )}
     </div>
   );
 }
+

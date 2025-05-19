@@ -9,7 +9,7 @@ import { useBreadcrumbs, type BreadcrumbItem } from '@/contexts/breadcrumb-conte
 import { useZooData } from '@/contexts/zoo-data-context'; 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List } from 'lucide-react'; // Added LayoutGrid and List icons
+import { ArrowLeft, AlertTriangle, Download, LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react'; // Added LayoutGrid and List icons
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
@@ -19,6 +19,7 @@ interface AnimalVerificationPageProps {
 }
 
 type ViewMode = 'card' | 'table';
+const ITEMS_PER_PAGE = 10;
 
 // Helper function to convert animal data to CSV format
 const convertAnimalsToCSV = (animals: Animal[], enclosureName: string, currentUser: User | null): string => {
@@ -74,6 +75,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
   const [section, setSection] = useState<Section | null | undefined>(null); // Added section state
   const [enclosure, setEnclosure] = useState<Enclosure | null | undefined>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('card'); // State for view mode
+  const [currentPage, setCurrentPage] = useState(1);
   
   const { setBreadcrumbs } = useBreadcrumbs();
   const { toast } = useToast();
@@ -98,6 +100,7 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
               { label: currentEnclosure.name, href: `/zoos/${zooId}/sites/${siteId}/sections/${sectionId}/enclosures/${enclosureId}/animals` },
             ];
             setBreadcrumbs(breadcrumbsData);
+            setCurrentPage(1); // Reset page when enclosure data changes/loads
           } else if (!isZooDataLoading) {
             setEnclosure(undefined);
             setBreadcrumbs([ 
@@ -138,6 +141,9 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
     const newVerifiedAt = isNowVerified ? new Date().toISOString() : undefined;
     
     updateAnimalVerification(zooId, siteId, sectionId, enclosureId, animalId, isNowVerified, newVerifiedAt);
+
+    // Note: The enclosure state itself is updated by the context, triggering a re-render.
+    // The pagination will pick up the changes from the updated enclosure.animals.
 
     setTimeout(() => {
         const currentAnimal = getEnclosureByIdFromContext(zooId, siteId, sectionId, enclosureId)?.animals.find(a => a.id === animalId);
@@ -221,6 +227,11 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
   }
 
   const animals = enclosure.animals; 
+  const totalPages = Math.ceil(animals.length / ITEMS_PER_PAGE);
+  const paginatedAnimals = animals.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="animate-fadeIn">
@@ -262,13 +273,40 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
         <p className="text-lg text-muted-foreground">This enclosure has no animals listed for verification.</p>
       ) : viewMode === 'card' ? (
         <div className="space-y-4">
-          {animals.map(animal => (
+          {paginatedAnimals.map(animal => (
             <AnimalListItem key={animal.id} animal={animal} onToggleVerify={handleToggleVerify} />
           ))}
         </div>
       ) : (
-        <AnimalTable animals={animals} onToggleVerify={handleToggleVerify} />
+        <AnimalTable animals={paginatedAnimals} onToggleVerify={handleToggleVerify} />
+      )}
+
+      {animals.length > ITEMS_PER_PAGE && (
+        <div className="mt-8 flex justify-center items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
       )}
     </div>
   );
 }
+
