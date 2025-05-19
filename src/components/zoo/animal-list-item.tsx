@@ -21,7 +21,7 @@ interface AnimalListItemProps {
 }
 
 const DetailItem: React.FC<{ icon: React.ElementType, label: string, value?: string | number | null, fullWidth?: boolean }> = ({ icon: Icon, label, value, fullWidth = false }) => {
-  if (!value && typeof value !== 'number' && typeof value !== 'string') return null;
+  if (value === null || value === undefined) return null;
   const displayValue = String(value).trim();
   if (displayValue === '') return null;
 
@@ -103,13 +103,19 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
             {sectionName && <DetailItem icon={Layers} label="Section" value={sectionName} />}
             {enclosureName && <DetailItem icon={Fence} label="Enclosure" value={enclosureName} />}
             <DetailItem icon={Milestone} label="Gender" value={animal.gender} />
-            {/* Ensure Identifier Type and Value are displayed if both exist */}
+            
             {animal.identifierType && animal.identifierValue && (
               <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} fullWidth />
             )}
-            {/* Ensure Breed Name is displayed */}
-            <DetailItem icon={Dna} label="Breed" value={animal.breedName} />
-            <DetailItem icon={VenetianMask} label="Morph" value={animal.morphName} />
+            
+            {animal.breedName && (
+              <DetailItem icon={Dna} label="Breed" value={animal.breedName} />
+            )}
+            
+            {animal.morphName && (
+              <DetailItem icon={VenetianMask} label="Morph" value={animal.morphName} />
+            )}
+
             <DetailItem icon={WeightIcon} label="Weight" value={animal.weight} />
             <DetailItem icon={Info} label="Age" value={animal.age} />
             <DetailItem icon={CalendarDays} label="Accession Date" value={formatDate(animal.accessionDate)} />
@@ -146,4 +152,3 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
     </Card>
   );
 }
-
