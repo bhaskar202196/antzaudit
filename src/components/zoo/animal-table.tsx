@@ -24,7 +24,7 @@ interface AnimalWithContext extends Animal {
   sectionName?: string;
   enclosureName?: string;
   // Make sure these are included from the context or props if needed elsewhere on the page
-  sectionId?: string; 
+  sectionId?: string;
   enclosureId?: string;
 }
 
@@ -60,8 +60,20 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
             <TableHead className="w-[60px] hidden md:table-cell px-2">Image</TableHead>
             <TableHead className="px-2 min-w-[120px]">Name</TableHead>
             <TableHead className="px-2 min-w-[200px] font-bold">Species (Common Name)</TableHead>
+            
+            {/* Moved Forward Columns */}
+            <TableHead className="hidden lg:table-cell px-2 text-center min-w-[90px]">Night Cell</TableHead>
+            <TableHead className="hidden lg:table-cell px-2 text-center min-w-[90px]">AC</TableHead>
+            <TableHead className="hidden lg:table-cell px-2 text-center min-w-[90px]">Camera</TableHead>
+            <TableHead className="px-2 min-w-[100px]">Status</TableHead>
+            <TableHead className="text-right px-2 min-w-[100px]">Actions</TableHead>
+
+            {/* Contextual Columns */}
             {showSectionEnclosureColumns ? <TableHead className="hidden lg:table-cell px-2 min-w-[100px]">Section</TableHead> : null}
             {showSectionEnclosureColumns ? <TableHead className="hidden lg:table-cell px-2 min-w-[100px]">Enclosure</TableHead> : null}
+            
+            {/* Other Detail Columns */}
+            <TableHead className="hidden xl:table-cell px-2 min-w-[150px]">Verified At</TableHead>
             <TableHead className="hidden md:table-cell px-2 min-w-[80px]">Gender</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">Micro Chip</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">Ring No.</TableHead>
@@ -69,15 +81,6 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
             <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">ID Value</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">Breed</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">Accession Type</TableHead>
-
-            {/* New Feature Columns */}
-            <TableHead className="hidden lg:table-cell px-2 text-center min-w-[90px]">Night Cell</TableHead>
-            <TableHead className="hidden lg:table-cell px-2 text-center min-w-[90px]">AC</TableHead>
-            <TableHead className="hidden lg:table-cell px-2 text-center min-w-[90px]">Camera</TableHead>
-
-            <TableHead className="px-2 min-w-[100px]">Status</TableHead>
-            <TableHead className="hidden xl:table-cell px-2 min-w-[150px]">Verified At</TableHead>
-            <TableHead className="text-right px-2 min-w-[100px]">Actions</TableHead>
             </TableRow>
         </TableHeader>
         <TableBody>
@@ -103,6 +106,59 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
                 <TableCell className="px-2">
                   <span className="font-bold text-foreground">{animal.species}</span>{animal.commonName ? ` (${animal.commonName})` : ''}
                 </TableCell>
+
+                {/* Moved Forward Columns Data */}
+                <TableCell className="hidden lg:table-cell px-2 text-center">
+                    <Switch
+                        checked={!!animal.nightCellPresence}
+                        onCheckedChange={(value) => handleFeatureToggle(animal, 'nightCellPresence', value)}
+                        aria-label="Night Cell Presence"
+                        className="mx-auto"
+                    />
+                </TableCell>
+                <TableCell className="hidden lg:table-cell px-2 text-center">
+                    <Switch
+                        checked={!!animal.airConditioning}
+                        onCheckedChange={(value) => handleFeatureToggle(animal, 'airConditioning', value)}
+                        aria-label="Air Conditioning"
+                        className="mx-auto"
+                    />
+                </TableCell>
+                <TableCell className="hidden lg:table-cell px-2 text-center">
+                    <Switch
+                        checked={!!animal.camera}
+                        onCheckedChange={(value) => handleFeatureToggle(animal, 'camera', value)}
+                        aria-label="Camera"
+                        className="mx-auto"
+                    />
+                </TableCell>
+                <TableCell className="px-2">
+                {animal.verified ? (
+                    <Badge variant="default" className="bg-accent text-accent-foreground whitespace-nowrap">
+                    <CheckCircle size={14} className="mr-1" /> Verified
+                    </Badge>
+                ) : (
+                    <Badge variant="secondary" className="whitespace-nowrap">
+                    <CircleOff size={14} className="mr-1" /> Not Verified
+                    </Badge>
+                )}
+                </TableCell>
+                <TableCell className="text-right px-2">
+                <Button
+                    onClick={() => onToggleVerify(animal.id)}
+                    variant={animal.verified ? "outline" : "default"}
+                    size="sm"
+                    className={`whitespace-nowrap ${!animal.verified ? 'bg-accent text-accent-foreground hover:bg-accent/90 focus-visible:ring-accent' : 'border-accent text-accent hover:bg-accent/10 focus-visible:ring-accent'}`}
+                >
+                    {animal.verified ? (
+                        <><CircleOff size={16} className="mr-1 sm:mr-2" /> <span className="hidden sm:inline">Unverify</span></>
+                        ) : (
+                        <><CheckCircle size={16} className="mr-1 sm:mr-2" /> <span className="hidden sm:inline">Verify</span></>
+                    )}
+                </Button>
+                </TableCell>
+                
+                {/* Contextual Columns Data */}
                 {showSectionEnclosureColumns ? (
                   <TableCell className="hidden lg:table-cell px-2">
                     {animal.sectionName ? <span className="flex items-center"><Layers size={14} className="mr-1 text-muted-foreground"/> {animal.sectionName}</span> : '-'}
@@ -113,6 +169,13 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
                      {animal.enclosureName ? <span className="flex items-center"><Fence size={14} className="mr-1 text-muted-foreground"/> {animal.enclosureName}</span> : '-'}
                   </TableCell>
                 ) : null}
+
+                {/* Other Detail Columns Data */}
+                <TableCell className="hidden xl:table-cell px-2">
+                {animal.verified && animal.verifiedAt
+                    ? new Date(animal.verifiedAt).toLocaleString()
+                    : '-'}
+                </TableCell>
                 <TableCell className="hidden md:table-cell px-2">
                     {animal.gender ? (
                         <span className="flex items-center"><Milestone size={14} className="mr-1 text-muted-foreground"/> {animal.gender}</span>
@@ -146,63 +209,6 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
                         <span className="flex items-center"><PackagePlus size={14} className="mr-1 text-muted-foreground"/> {animal.accessionType}</span>
                     ) : '-'}
                 </TableCell>
-
-                {/* New Feature Toggles in Table */}
-                <TableCell className="hidden lg:table-cell px-2 text-center">
-                    <Switch
-                        checked={!!animal.nightCellPresence}
-                        onCheckedChange={(value) => handleFeatureToggle(animal, 'nightCellPresence', value)}
-                        aria-label="Night Cell Presence"
-                        className="mx-auto"
-                    />
-                </TableCell>
-                <TableCell className="hidden lg:table-cell px-2 text-center">
-                    <Switch
-                        checked={!!animal.airConditioning}
-                        onCheckedChange={(value) => handleFeatureToggle(animal, 'airConditioning', value)}
-                        aria-label="Air Conditioning"
-                        className="mx-auto"
-                    />
-                </TableCell>
-                <TableCell className="hidden lg:table-cell px-2 text-center">
-                    <Switch
-                        checked={!!animal.camera}
-                        onCheckedChange={(value) => handleFeatureToggle(animal, 'camera', value)}
-                        aria-label="Camera"
-                        className="mx-auto"
-                    />
-                </TableCell>
-
-                <TableCell className="px-2">
-                {animal.verified ? (
-                    <Badge variant="default" className="bg-accent text-accent-foreground whitespace-nowrap">
-                    <CheckCircle size={14} className="mr-1" /> Verified
-                    </Badge>
-                ) : (
-                    <Badge variant="secondary" className="whitespace-nowrap">
-                    <CircleOff size={14} className="mr-1" /> Not Verified
-                    </Badge>
-                )}
-                </TableCell>
-                <TableCell className="hidden xl:table-cell px-2">
-                {animal.verified && animal.verifiedAt
-                    ? new Date(animal.verifiedAt).toLocaleString()
-                    : '-'}
-                </TableCell>
-                <TableCell className="text-right px-2">
-                <Button
-                    onClick={() => onToggleVerify(animal.id)}
-                    variant={animal.verified ? "outline" : "default"}
-                    size="sm"
-                    className={`whitespace-nowrap ${!animal.verified ? 'bg-accent text-accent-foreground hover:bg-accent/90 focus-visible:ring-accent' : 'border-accent text-accent hover:bg-accent/10 focus-visible:ring-accent'}`}
-                >
-                    {animal.verified ? (
-                        <><CircleOff size={16} className="mr-1 sm:mr-2" /> <span className="hidden sm:inline">Unverify</span></>
-                        ) : (
-                        <><CheckCircle size={16} className="mr-1 sm:mr-2" /> <span className="hidden sm:inline">Verify</span></>
-                    )}
-                </Button>
-                </TableCell>
             </TableRow>
             ))}
         </TableBody>
@@ -210,3 +216,4 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
     </Card>
   );
 }
+
