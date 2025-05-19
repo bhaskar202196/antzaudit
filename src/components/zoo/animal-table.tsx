@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, CircleOff, PawPrint, Fingerprint, Disc3, Layers, Fence, Milestone, PackagePlus } from 'lucide-react';
+import { CheckCircle, CircleOff, PawPrint, Fingerprint, Disc3, Layers, Fence, Milestone, PackagePlus, Dna, BadgeHelp } from 'lucide-react';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 
@@ -44,6 +44,9 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
             <TableHead className="hidden md:table-cell px-2 min-w-[80px]">Gender</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">Micro Chip</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">Ring No.</TableHead>
+            <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">Breed</TableHead>
+            <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">ID Type</TableHead>
+            <TableHead className="hidden xl:table-cell px-2 min-w-[100px]">ID Value</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[120px]">Accession Type</TableHead>
             <TableHead className="px-2 min-w-[100px]">Status</TableHead>
             <TableHead className="hidden xl:table-cell px-2 min-w-[150px]">Verified At</TableHead>
@@ -96,6 +99,19 @@ export default function AnimalTable({ animals, onToggleVerify }: AnimalTableProp
                     {animal.ringNumber ? (
                         <span className="flex items-center"><Disc3 size={14} className="mr-1 text-muted-foreground"/> {animal.ringNumber}</span>
                     ) : '-'}
+                </TableCell>
+                <TableCell className="hidden xl:table-cell px-2">
+                    {animal.breedName ? (
+                        <span className="flex items-center"><Dna size={14} className="mr-1 text-muted-foreground"/> {animal.breedName}</span>
+                    ) : '-'}
+                </TableCell>
+                <TableCell className="hidden xl:table-cell px-2">
+                    {animal.identifierType ? (
+                        <span className="flex items-center"><BadgeHelp size={14} className="mr-1 text-muted-foreground"/> {animal.identifierType}</span>
+                    ) : '-'}
+                </TableCell>
+                <TableCell className="hidden xl:table-cell px-2">
+                    {animal.identifierValue || '-'}
                 </TableCell>
                  <TableCell className="hidden xl:table-cell px-2">
                     {animal.accessionType ? (

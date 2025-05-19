@@ -103,9 +103,11 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
             {sectionName && <DetailItem icon={Layers} label="Section" value={sectionName} />}
             {enclosureName && <DetailItem icon={Fence} label="Enclosure" value={enclosureName} />}
             <DetailItem icon={Milestone} label="Gender" value={animal.gender} />
+            {/* Ensure Identifier Type and Value are displayed if both exist */}
             {animal.identifierType && animal.identifierValue && (
               <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} fullWidth />
             )}
+            {/* Ensure Breed Name is displayed */}
             <DetailItem icon={Dna} label="Breed" value={animal.breedName} />
             <DetailItem icon={VenetianMask} label="Morph" value={animal.morphName} />
             <DetailItem icon={WeightIcon} label="Weight" value={animal.weight} />
