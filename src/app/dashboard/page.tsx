@@ -1,3 +1,4 @@
+
 // src/app/dashboard/page.tsx
 "use client";
 import type { Zoo } from '@/lib/types';
@@ -25,8 +26,8 @@ export default function DashboardPage() {
   const router = useRouter();
 
   // State for the new inline form for importing the first zoo
-  const [newZooName, setNewZooName] = useState('');
-  const [newZooCity, setNewZooCity] = useState('');
+  const [newZooName, setNewZooName] = useState('Ants');
+  const [newZooCity, setNewZooCity] = useState('BLR');
   const [selectedCsvFile, setSelectedCsvFile] = useState<File | null>(null);
   const [isProcessingInlineUpload, setIsProcessingInlineUpload] = useState(false);
 
@@ -154,7 +155,7 @@ export default function DashboardPage() {
               Import Your First Zoo
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              No zoos found. Get started by providing a name, city, and uploading a CSV file with your zoo's data.
+              No zoos found. Get started by providing a name, city, and uploading a CSV file with your zoo's data. Default values provided.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -216,3 +217,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
