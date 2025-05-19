@@ -1,3 +1,4 @@
+
 // src/contexts/zoo-data-context.tsx
 "use client";
 import type { ReactNode } from 'react';
@@ -32,6 +33,8 @@ interface CsvRow {
   'Added On Antz'?: string;
 }
 
+type AnimalBooleanFeature = 'nightCellPresence' | 'airConditioning' | 'camera';
+
 interface ZooDataContextType {
   zoos: Zoo[];
   replaceSpecificZooDataFromCsv: (zooIdToReplace: string, csvString: string, currentUser: User) => Promise<{ success: boolean; error?: string }>;
@@ -41,6 +44,7 @@ interface ZooDataContextType {
   getSectionById: (zooId: string, siteId: string, sectionId: string) => Section | undefined;
   getEnclosureById: (zooId: string, siteId: string, sectionId: string, enclosureId: string) => Enclosure | undefined;
   updateAnimalVerification: (zooId: string, siteId: string, sectionId: string, enclosureId: string, animalId: string, verified: boolean, verifiedAt?: string) => void;
+  updateAnimalBooleanFeature: (zooId: string, siteId: string, sectionId: string, enclosureId: string, animalId: string, featureName: AnimalBooleanFeature, value: boolean) => void;
   isLoading: boolean;
 }
 
@@ -149,6 +153,10 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
         commonName: row['Common Name'],
         imageUrl: `https://picsum.photos/seed/animal${animalIdFromCsv.replace(/[^a-zA-Z0-9]/g, '')}/100/100`,
         csvRowNumber: index + 2,
+        // Initialize new boolean features
+        nightCellPresence: false,
+        airConditioning: false,
+        camera: false,
       };
 
       const animalCountStr = row['Animal Count']?.trim();
@@ -375,6 +383,57 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
+  const updateAnimalBooleanFeature = useCallback((
+    zooId: string, 
+    siteId: string, 
+    sectionId: string, 
+    enclosureId: string, 
+    animalId: string, 
+    featureName: AnimalBooleanFeature, 
+    value: boolean
+  ) => {
+    setZoos(prevZoos => {
+      return prevZoos.map(zoo => {
+        if (zoo.id === zooId) {
+          return {
+            ...zoo,
+            sites: zoo.sites.map(site => {
+              if (site.id === siteId) {
+                return {
+                  ...site,
+                  sections: site.sections.map(currentSection => {
+                    if (currentSection.id === sectionId) {
+                      return {
+                        ...currentSection,
+                        enclosures: currentSection.enclosures.map(enclosure => {
+                          if (enclosure.id === enclosureId) {
+                            return {
+                              ...enclosure,
+                              animals: enclosure.animals.map(animal => {
+                                if (animal.id === animalId) {
+                                  return { ...animal, [featureName]: value };
+                                }
+                                return animal;
+                              })
+                            };
+                          }
+                          return enclosure;
+                        })
+                      };
+                    }
+                    return currentSection;
+                  })
+                };
+              }
+              return site;
+            })
+          };
+        }
+        return zoo;
+      });
+    });
+  }, []);
+
   const value = { 
     zoos, 
     replaceSpecificZooDataFromCsv,
@@ -384,6 +443,7 @@ export const ZooDataProvider = ({ children }: { children: ReactNode }) => {
     getSectionById,
     getEnclosureById, 
     updateAnimalVerification, 
+    updateAnimalBooleanFeature,
     isLoading 
   };
 

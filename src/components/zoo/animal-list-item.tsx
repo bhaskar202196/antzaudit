@@ -9,10 +9,15 @@ import {
   PawPrint, CheckCircle, CircleOff, Tag, Clock, Disc3, Fingerprint, Milestone, 
   Scale, CalendarDays, BadgeHelp, PackagePlus, Info, WeightIcon, VenetianMask, Dna,
   Layers, // For Section
-  Fence // For Enclosure
+  Fence, // For Enclosure
+  Moon, ThermometerSnowflake, Video // For new features
 } from 'lucide-react'; 
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useZooData } from '@/contexts/zoo-data-context'; // To call updateAnimalBooleanFeature
+import { useParams } from 'next/navigation'; // To get zooId, siteId etc.
 
 interface AnimalListItemProps {
   animal: Animal;
@@ -40,6 +45,25 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
     ? new Date(animal.verifiedAt).toLocaleString() 
     : null;
 
+  const params = useParams<{ zooId: string; siteId: string; sectionId?: string; enclosureId?: string }>();
+  const { updateAnimalBooleanFeature } = useZooData();
+
+  const handleFeatureToggle = (featureName: 'nightCellPresence' | 'airConditioning' | 'camera', value: boolean) => {
+    if (params.zooId && params.siteId && (params.sectionId || animal.sectionId) && (params.enclosureId || animal.enclosureId)) {
+      // For "all-animals" page, sectionId and enclosureId might not be in params, so get from animal object
+      const currentSectionId = params.sectionId || (animal as any).sectionId;
+      const currentEnclosureId = params.enclosureId || (animal as any).enclosureId;
+      if (!currentSectionId || !currentEnclosureId) {
+        console.error("Section ID or Enclosure ID missing for feature toggle on all-animals page context.");
+        return;
+      }
+      updateAnimalBooleanFeature(params.zooId, params.siteId, currentSectionId, currentEnclosureId, animal.id, featureName, value);
+    } else {
+      console.error("Missing parameters for feature toggle.");
+    }
+  };
+
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return undefined;
     try {
@@ -53,9 +77,9 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
 
   return (
     <Card className="flex flex-col shadow-md hover:shadow-lg transition-shadow duration-300">
-      <div className="flex flex-col sm:flex-row items-center p-4 gap-4">
+      <div className="flex flex-col sm:flex-row items-start p-4 gap-4">
         {animal.imageUrl && (
-           <div className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden flex-shrink-0">
+           <div className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden flex-shrink-0 self-center sm:self-start">
             <Image 
               src={animal.imageUrl} 
               alt={`Image of ${animal.name}`} 
@@ -66,7 +90,7 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
           </div>
         )}
         {!animal.imageUrl && (
-          <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+          <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 self-center sm:self-start">
             <PawPrint className="h-12 w-12 text-muted-foreground" />
           </div>
         )}
@@ -105,15 +129,53 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
           </CardHeader>
           
           <CardContent className="p-0 mt-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
-              {sectionName && <DetailItem icon={Layers} label="Section" value={sectionName} />}
-              {enclosureName && <DetailItem icon={Fence} label="Enclosure" value={enclosureName} />}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5 text-sm mb-3">
+              {sectionName && <DetailItem icon={Layers} label="Section" value={sectionName} isHighlighted />}
+              {enclosureName && <DetailItem icon={Fence} label="Enclosure" value={enclosureName} isHighlighted />}
               <DetailItem icon={Milestone} label="Gender" value={animal.gender} />
               
               {animal.identifierType && animal.identifierValue && (
-                <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} fullWidth />
+                <DetailItem icon={BadgeHelp} label={animal.identifierType} value={animal.identifierValue} fullWidth isHighlighted />
               )}
             </div>
+
+            {/* New Boolean Feature Toggles */}
+            <div className="space-y-3 my-3 border-t border-b py-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`nightCell-${animal.id}`} className="flex items-center text-sm font-medium">
+                  <Moon className="mr-2 h-4 w-4 text-muted-foreground" /> Night Cell
+                </Label>
+                <Switch
+                  id={`nightCell-${animal.id}`}
+                  checked={!!animal.nightCellPresence}
+                  onCheckedChange={(value) => handleFeatureToggle('nightCellPresence', value)}
+                  aria-label="Night Cell Presence"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`ac-${animal.id}`} className="flex items-center text-sm font-medium">
+                  <ThermometerSnowflake className="mr-2 h-4 w-4 text-muted-foreground" /> Air Conditioning
+                </Label>
+                <Switch
+                  id={`ac-${animal.id}`}
+                  checked={!!animal.airConditioning}
+                  onCheckedChange={(value) => handleFeatureToggle('airConditioning', value)}
+                  aria-label="Air Conditioning Presence"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`camera-${animal.id}`} className="flex items-center text-sm font-medium">
+                  <Video className="mr-2 h-4 w-4 text-muted-foreground" /> Camera
+                </Label>
+                <Switch
+                  id={`camera-${animal.id}`}
+                  checked={!!animal.camera}
+                  onCheckedChange={(value) => handleFeatureToggle('camera', value)}
+                  aria-label="Camera Presence"
+                />
+              </div>
+            </div>
+
 
             <Accordion type="single" collapsible className="w-full mt-3">
               <AccordionItem value="additional-details">
@@ -142,7 +204,7 @@ export default function AnimalListItem({ animal, onToggleVerify, sectionName, en
           </CardContent>
         </div>
 
-        <div className="flex flex-col items-center sm:items-end gap-2 mt-2 sm:mt-0 flex-shrink-0">
+        <div className="flex flex-col items-center sm:items-end gap-2 mt-2 sm:mt-0 flex-shrink-0 self-center sm:self-start">
           {animal.verified ? (
             <Badge variant="default" className="bg-accent text-accent-foreground select-none">
               <CheckCircle size={16} className="mr-1" /> Verified

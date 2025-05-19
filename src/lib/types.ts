@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -29,6 +30,11 @@ export interface Animal {
   addedOnAntz?: string; // Date string, likely when record was created in source system
   commonName?: string; // Store original 'Common Name' from CSV if distinct from 'name'
   csvRowNumber?: number; // For debugging or reference
+
+  // New boolean features
+  nightCellPresence?: boolean;
+  airConditioning?: boolean;
+  camera?: boolean;
 }
 
 export interface Enclosure {

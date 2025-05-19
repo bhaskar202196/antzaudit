@@ -39,7 +39,8 @@ const convertSiteAnimalsToCSV = (animals: SiteAnimalViewData[], siteName: string
     'Verified', 'Verified At', 'Who Verified',
     'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue', 
     'BreedName', 'MorphName', 'Weight', 'Age', 
-    'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row'
+    'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row',
+    'Night Cell Presence', 'Air Conditioning', 'Camera' // New features
   ];
   
   const rows = animals.map(animal => [
@@ -50,7 +51,10 @@ const convertSiteAnimalsToCSV = (animals: SiteAnimalViewData[], siteName: string
     animal.verified && currentUser ? currentUser.email : '',
     animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
     animal.breedName, animal.morphName, animal.weight, animal.age,
-    animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber
+    animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber,
+    animal.nightCellPresence ? 'Yes' : 'No', // New features
+    animal.airConditioning ? 'Yes' : 'No',  // New features
+    animal.camera ? 'Yes' : 'No'             // New features
   ]);
 
   const escapeField = (field: string | number | boolean | undefined | null) => {
@@ -407,4 +411,3 @@ export default function AllAnimalsPage({ params: paramsPromise }: AllAnimalsPage
     </div>
   );
 }
-

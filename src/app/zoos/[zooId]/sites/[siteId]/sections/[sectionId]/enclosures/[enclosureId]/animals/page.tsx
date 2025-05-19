@@ -28,7 +28,9 @@ const convertAnimalsToCSV = (animals: Animal[], enclosureName: string, currentUs
                    'Verified', 'Verified At', 'Who Verified', // Added 'Who Verified'
                    'MicroChip', 'RingNumber', 'IdentifierType', 'IdentifierValue', 
                    'BreedName', 'MorphName', 'Weight', 'Age', 
-                   'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row'];
+                   'AccessionDate', 'AccessionType', 'BirthDate', 'AddedOnAntz', 'CSV Row',
+                   'Night Cell Presence', 'Air Conditioning', 'Camera' // New features
+                  ];
   const rows = animals.map(animal => [
     animal.id, animal.name, animal.species, animal.commonName, animal.gender,
     animal.verified ? 'Yes' : 'No',
@@ -36,7 +38,10 @@ const convertAnimalsToCSV = (animals: Animal[], enclosureName: string, currentUs
     animal.verified && currentUser ? currentUser.email : '', // Populate 'Who Verified'
     animal.microChip, animal.ringNumber, animal.identifierType, animal.identifierValue,
     animal.breedName, animal.morphName, animal.weight, animal.age,
-    animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber
+    animal.accessionDate, animal.accessionType, animal.birthDate, animal.addedOnAntz, animal.csvRowNumber,
+    animal.nightCellPresence ? 'Yes' : 'No', // New features
+    animal.airConditioning ? 'Yes' : 'No',  // New features
+    animal.camera ? 'Yes' : 'No'             // New features
   ]);
 
   const escapeField = (field: string | number | boolean | undefined | null) => {
@@ -337,4 +342,3 @@ export default function AnimalVerificationPage({ params: paramsPromise }: Animal
     </div>
   );
 }
-
